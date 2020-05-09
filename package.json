@@ -8,9 +8,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/herobank110/tower.git"
+    "url": "https://github.com/herobank110/tower"
   },
   "author": "David Kanekanian",
+  "license": "Copyright 2020 David Kanekanian",
   "dependencies": {
     "three": "0.116.1",
     "pug": "2.0.4",
