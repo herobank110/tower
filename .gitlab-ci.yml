@@ -29,8 +29,10 @@ pages:
     - ./node_modules/.bin/sass src/:build/
     # Move the build folder to the gitlab pages folder
     - mv build public
+  interruptible: true
   artifacts:
     paths:
       - public
+    expire_in: 3 days
   only:
     - master
