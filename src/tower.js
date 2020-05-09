@@ -1,28 +1,119 @@
 var THREE = require("three");
 
+var model = {
+    sceneInteract: {
+        bPanStarted: false,
+        bZoomStarted: false,
+        bSelectStarted: false,
+        trueCameraZ: 5.,
+        bJustMovedCamera: false,
+        bJustReleasedPan: false,
+        bMovedCameraSinceInteract: false
+    }
+};
+
 const CANVAS_SIZE = new THREE.Vector2(800, 600);
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1, 1000);
+// var projector = new THREE.Projector();
+var towerCanvas = document.querySelector("#tower-canvas");
 
-var renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#tower-canvas") });
+var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas });
 renderer.setSize(CANVAS_SIZE.x, CANVAS_SIZE.y);
-document.body.appendChild(renderer.domElement);
+renderer.setClearColor(0xbbbbbb);
 
-var geometry = new THREE.BoxGeometry();
-var material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-var cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
+var gridHelper = new THREE.GridHelper( 100, 100 );
+gridHelper.rotation.x = Math.PI / 2;
+scene.add( gridHelper );
 
-camera.position.z = 5;
+camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
 
 var animate = function () {
     requestAnimationFrame(animate);
 
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
+    if (!model.sceneInteract.bMovedCameraSinceInteract
+        && model.sceneInteract.bJustReleasedPan
+    ) {
+        // Open the node palette.
+        console.log("Opening node palette");
+    }
 
     renderer.render(scene, camera);
+
+    // Reset per-frame state.
+    model.sceneInteract.bJustMovedCamera = false;
+    model.sceneInteract.bJustReleasedPan = false;
 };
 
 animate();
+
+window.addEventListener("mousemove", function (event) {
+    var cameraDist = camera.position.z;
+    function pan() {
+        camera.position.x -= event.movementX * 0.0026 * cameraDist;
+        camera.position.y += event.movementY * 0.0026 * cameraDist;
+    };
+    function zoom() {
+        // Set the true float zoom level in the model but clamp to a
+        // 'ratchet' system for the camera position.
+        var oldDist = model.sceneInteract.trueCameraZ;
+        var newDist = oldDist - event.movementX * 0.0018 * cameraDist;
+        newDist = THREE.MathUtils.clamp(newDist, 2, 20);
+        model.sceneInteract.trueCameraZ = newDist;
+
+        // Clamp the camera to a 'grid' system.
+        camera.position.z = Math.floor(newDist);
+    };
+
+    if (model.sceneInteract.bSelectStarted && model.sceneInteract.bPanStarted) {
+        zoom()
+    } else if (model.sceneInteract.bPanStarted) {
+        pan()
+    } else if (model.sceneInteract.bZoomStarted) {
+        zoom()
+    } else {
+        return;
+    }
+
+    // Notify the input system that the camera was moved.
+    model.sceneInteract.bJustMovedCamera = true;
+    model.sceneInteract.bMovedCameraSinceInteract = true;
+});
+
+// Don't show the normal right click menu on the canvas.
+towerCanvas.addEventListener('contextmenu', event => event.preventDefault());
+
+towerCanvas.addEventListener("mousedown", function (event) {
+    switch (event.which) {
+    case 1: 
+        model.sceneInteract.bSelectStarted = true;
+        break;
+    case 2:
+        model.sceneInteract.bZoomStarted = true;
+        model.sceneInteract.bMovedCameraSinceInteract = false;
+        break;
+    case 3:
+        model.sceneInteract.bPanStarted = true;
+        model.sceneInteract.bMovedCameraSinceInteract = false;
+        break;
+    };
+});
+
+// We want to know whenever the key was released over the entire window.
+window.addEventListener("mouseup", function (event) {
+    event.preventDefault();
+    switch (event.which) {
+    case 1:
+        model.sceneInteract.bSelectStarted = false;
+        break;
+    case 2:
+        model.sceneInteract.bZoomStarted = false;
+        break;
+    case 3:
+        model.sceneInteract.bPanStarted = false;
+        model.sceneInteract.bJustReleasedPan = true;
+        break;
+    };
+});
+
