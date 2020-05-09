@@ -1,16 +1,32 @@
 var THREE = require("three");
 
+const EInteractTypeFlags = {
+    SELECT: 1 << 0,
+    ZOOM: 1 << 1,
+    PAN: 1 << 2
+}
+
 var model = {
     sceneInteract: {
+        /** Whether pan was started and not ended (is held.) */
         bPanStarted: false,
+        /** Whether zoom was started and not ended (is held.) */
         bZoomStarted: false,
+        /** Whether select was started and not ended (is held.) */
         bSelectStarted: false,
-        trueCameraZ: 5.,
-        bJustMovedCamera: false,
-        bJustReleasedPan: false,
-        bMovedCameraSinceInteract: false,
+        /** Whether any interaction was started. Uses flags (@see EInteractTypeFlags ). */
         bAnyInteractStarted: 0,
+        /** Floating point value of the camera's zoom, without flooring. */
+        trueCameraZ: 5.,
+        /** Whether camera was moved (pan or zoom) this frame. */
+        bJustMovedCamera: false,
+        /** Whether pan was released this frame. */
+        bJustReleasedPan: false,
+        /** Whether camera was moved since the most recent interact (pan, zoom, select) was started. */
+        bMovedCameraSinceInteract: false,
+        /** Whether any zoom occurred this frame. */
         bJustZoomed: false,
+        /** Whether the most recent movement included zoom. */
         bMovementHadZoom: false
     }
 };
@@ -104,15 +120,15 @@ towerCanvas.addEventListener("mousedown", function (event) {
     model.sceneInteract.bMovedCameraSinceInteract = false;
     switch (event.which) {
         case 1:
-            model.sceneInteract.bAnyInteractStarted |= 1;
+            model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.SELECT;
             model.sceneInteract.bSelectStarted = true;
             break;
         case 2:
-            model.sceneInteract.bAnyInteractStarted |= 2;
+            model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.ZOOM;
             model.sceneInteract.bZoomStarted = true;
             break;
         case 3:
-            model.sceneInteract.bAnyInteractStarted |= 4;
+            model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.PAN;
             model.sceneInteract.bPanStarted = true;
             break;
     };
@@ -123,18 +139,21 @@ window.addEventListener("mouseup", function (event) {
     event.preventDefault();
     switch (event.which) {
         case 1:
-            model.sceneInteract.bAnyInteractStarted &= ~1;
+            model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.SELECT;
             model.sceneInteract.bSelectStarted = false;
             break;
         case 2:
-            model.sceneInteract.bAnyInteractStarted &= ~2;
+            model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.ZOOM;
             model.sceneInteract.bZoomStarted = false;
             break;
         case 3:
-            model.sceneInteract.bAnyInteractStarted &= ~4;
+            model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.PAN;
             model.sceneInteract.bPanStarted = false;
             model.sceneInteract.bJustReleasedPan = true;
             break;
     };
 });
 
+console.log(EInteractTypeFlags.SELECT);
+console.log(EInteractTypeFlags.ZOOM);
+console.log(EInteractTypeFlags.PAN);
