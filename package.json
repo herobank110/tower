@@ -16,6 +16,7 @@
     "three": "0.116.1",
     "pug": "2.0.4",
     "pug-cli": "1.0.0-alpha6",
-    "browserify": "16.5.1"
+    "browserify": "16.5.1",
+    "sass": "1.26.5"
   }
 }
