@@ -1,0 +1,20 @@
+{
+  "name": "tower",
+  "version": "0.0.1",
+  "description": "Visual scripting on the go",
+  "main": "src/tower.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/herobank110/tower.git"
+  },
+  "author": "David Kanekanian",
+  "dependencies": {
+    "three": "0.116.1",
+    "pug": "2.0.4",
+    "pug-cli": "1.0.0-alpha6",
+    "browserify": "16.5.1"
+  }
+}
