@@ -7,22 +7,24 @@ var camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1,
 
 var renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#tower-canvas") });
 renderer.setSize(CANVAS_SIZE.x, CANVAS_SIZE.y);
-document.body.appendChild(renderer.domElement);
+renderer.setClearColor(0xbbbbbb);
 
-var geometry = new THREE.BoxGeometry();
-var material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-var cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
+var gridHelper = new THREE.GridHelper( 100, 100 );
+gridHelper.rotation.x = Math.PI / 2;
+scene.add( gridHelper );
 
 camera.position.z = 5;
 
 var animate = function () {
     requestAnimationFrame(animate);
 
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
-
     renderer.render(scene, camera);
 };
 
 animate();
+
+
+window.addEventListener("mousemove", function (event) {
+    camera.position.x -= event.movementX * 0.012;
+    camera.position.y += event.movementY * 0.012;
+})
