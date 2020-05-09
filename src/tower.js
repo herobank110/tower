@@ -3,7 +3,8 @@ var THREE = require("three");
 var model = {
     sceneInteract: {
         panStarted: false,
-        zoomStarted: false
+        zoomStarted: false,
+        trueCameraZ: 5.
     }
 };
 
@@ -22,7 +23,7 @@ var gridHelper = new THREE.GridHelper( 100, 100 );
 gridHelper.rotation.x = Math.PI / 2;
 scene.add( gridHelper );
 
-camera.position.z = 5;
+camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
 
 var animate = function () {
     requestAnimationFrame(animate);
@@ -57,9 +58,14 @@ window.addEventListener("mousemove", function (event) {
         camera.position.x -= event.movementX * 0.0026 * cameraDist;
         camera.position.y += event.movementY * 0.0026 * cameraDist;
     } else if (model.sceneInteract.zoomStarted) {
-        var newPos = camera.position.z - event.movementX * 0.0018 * cameraDist;
-        newPos = THREE.MathUtils.clamp(newPos, 1, 20);
-        camera.position.z = newPos;
+        // Set the true float zoom level in the model but clamp to a
+        // 'ratchet' system for the camera position.
+        var oldDist = model.sceneInteract.trueCameraZ;
+        var newDist = oldDist - event.movementX * 0.0018 * cameraDist;
+        newDist = THREE.MathUtils.clamp(newDist, 2, 20);
+        model.sceneInteract.trueCameraZ = newDist;
+        // Clamp the camera to a 'grid' system.
+        camera.position.z = Math.floor(newDist);
     }
 });
 
