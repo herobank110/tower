@@ -11,6 +11,7 @@ const CANVAS_SIZE = new THREE.Vector2(800, 600);
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1, 1000);
+// var projector = new THREE.Projector();
 var towerCanvas = document.querySelector("#tower-canvas");
 
 var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas });
@@ -31,12 +32,32 @@ var animate = function () {
 
 animate();
 
+function screenToWorld(_screenPos)
+{
+    var worldPos = _screenPos.clone();
+    // worldPos.x = worldPos.x / CANVAS_SIZE.x/2 - 1;
+    // worldPos.y = - worldPos.y / CANVAS_SIZE.y/2 + 1;
+    worldPos.unproject( camera );
+    return worldPos;                    
+}
+
+function worldToScreen(_worldPos)
+{
+    var screenPos = _worldPos.clone();
+    projector.projectVector( screenPos, camera );
+    screenPos.x = ( screenPos.x + 1 ) * windowHalfX;
+    screenPos.y = ( - screenPos.y + 1) * windowHalfY;
+    return screenPos;
+}
+
 window.addEventListener("mousemove", function (event) {
+    var cameraDist = camera.position.z;
+
     if (model.sceneInteract.panStarted) {
-        camera.position.x -= event.movementX * 0.012;
-        camera.position.y += event.movementY * 0.012;
+        camera.position.x -= event.movementX * 0.0026 * cameraDist;
+        camera.position.y += event.movementY * 0.0026 * cameraDist;
     } else if (model.sceneInteract.zoomStarted) {
-        camera.position.z -= event.movementX * 0.012;
+        camera.position.z -= event.movementX * 0.0018 * cameraDist;
     }
 });
 
