@@ -58,7 +58,7 @@ window.addEventListener("mousemove", function (event) {
         camera.position.y += event.movementY * 0.0026 * cameraDist;
     } else if (model.sceneInteract.zoomStarted) {
         var newPos = camera.position.z - event.movementX * 0.0018 * cameraDist;
-        newPos = THREE.MathUtils.clamp(newPos, 1, 10);
+        newPos = THREE.MathUtils.clamp(newPos, 1, 20);
         camera.position.z = newPos;
     }
 });
