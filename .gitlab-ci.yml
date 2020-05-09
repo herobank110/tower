@@ -11,13 +11,13 @@ cache:
 
 test_async:
   script:
-    - npm install
+    - npm install --global
     - echo Must add tests!
 
 pages:
   stage: deploy
   script:
-    - npm install
+    - npm install --global
     # Create the build directory if not already there.
     - mkdir build
     # Bundle the javascript to include three.js and other modules
