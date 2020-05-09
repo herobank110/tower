@@ -35,6 +35,8 @@ window.addEventListener("mousemove", function (event) {
     if (model.sceneInteract.panStarted) {
         camera.position.x -= event.movementX * 0.012;
         camera.position.y += event.movementY * 0.012;
+    } else if (model.sceneInteract.zoomStarted) {
+        camera.position.z -= event.movementX * 0.012;
     }
 });
 
@@ -53,7 +55,8 @@ towerCanvas.addEventListener("mousedown", function (event) {
     };
 });
 
-towerCanvas.addEventListener("mouseup", function (event) {
+// We want to know whenever the key was released over the entire window.
+window.addEventListener("mouseup", function (event) {
     event.preventDefault();
     switch (event.which) {
     case 1: break;
