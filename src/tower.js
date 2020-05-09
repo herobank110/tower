@@ -4,6 +4,7 @@ var model = {
     sceneInteract: {
         bPanStarted: false,
         bZoomStarted: false,
+        bSelectStarted: false,
         trueCameraZ: 5.,
         bJustMovedCamera: false,
         bJustReleasedPan: false,
@@ -49,16 +50,11 @@ animate();
 
 window.addEventListener("mousemove", function (event) {
     var cameraDist = camera.position.z;
-
-    if (model.sceneInteract.bPanStarted) {
+    function pan() {
         camera.position.x -= event.movementX * 0.0026 * cameraDist;
         camera.position.y += event.movementY * 0.0026 * cameraDist;
-
-        // Notify the input system that the camera was moved.
-        model.sceneInteract.bJustMovedCamera = true;
-        model.sceneInteract.bMovedCameraSinceInteract = true;
-
-    } else if (model.sceneInteract.bZoomStarted) {
+    };
+    function zoom() {
         // Set the true float zoom level in the model but clamp to a
         // 'ratchet' system for the camera position.
         var oldDist = model.sceneInteract.trueCameraZ;
@@ -68,11 +64,21 @@ window.addEventListener("mousemove", function (event) {
 
         // Clamp the camera to a 'grid' system.
         camera.position.z = Math.floor(newDist);
+    };
 
-        // Notify the input system that the camera was moved.
-        model.sceneInteract.bJustMovedCamera = true;
-        model.sceneInteract.bMovedCameraSinceInteract = true;
+    if (model.sceneInteract.bSelectStarted && model.sceneInteract.bPanStarted) {
+        zoom()
+    } else if (model.sceneInteract.bPanStarted) {
+        pan()
+    } else if (model.sceneInteract.bZoomStarted) {
+        zoom()
+    } else {
+        return;
     }
+
+    // Notify the input system that the camera was moved.
+    model.sceneInteract.bJustMovedCamera = true;
+    model.sceneInteract.bMovedCameraSinceInteract = true;
 });
 
 // Don't show the normal right click menu on the canvas.
@@ -80,7 +86,9 @@ towerCanvas.addEventListener('contextmenu', event => event.preventDefault());
 
 towerCanvas.addEventListener("mousedown", function (event) {
     switch (event.which) {
-    case 1: break;
+    case 1: 
+        model.sceneInteract.bSelectStarted = true;
+        break;
     case 2:
         model.sceneInteract.bZoomStarted = true;
         model.sceneInteract.bMovedCameraSinceInteract = false;
@@ -96,7 +104,9 @@ towerCanvas.addEventListener("mousedown", function (event) {
 window.addEventListener("mouseup", function (event) {
     event.preventDefault();
     switch (event.which) {
-    case 1: break;
+    case 1:
+        model.sceneInteract.bSelectStarted = false;
+        break;
     case 2:
         model.sceneInteract.bZoomStarted = false;
         break;
