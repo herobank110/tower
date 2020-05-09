@@ -1,0 +1,35 @@
+# This file is a template, and might need editing before it works on your project.
+# Official framework image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/node/tags/
+image: node:latest
+
+# This folder is cached between builds
+# http://docs.gitlab.com/ce/ci/yaml/README.html#cache
+cache:
+  paths:
+    - node_modules/
+
+test_async:
+  script:
+    - npm install
+    - echo Must add tests!
+
+pages:
+  stage: deploy
+  script:
+    - npm install
+    # Create the build directory if not already there.
+    - mkdir build
+    # Bundle the javascript to include three.js and other modules
+    - browserify src/tower.js > build/bundle.js
+    # Build the pug to html files
+    - pug src/ --out build/
+    # Build the sass to css files
+    - sass src/:build/
+    # Move the build folder to the gitlab pages folder
+    - mv build public
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
