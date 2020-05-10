@@ -1,12 +1,23 @@
-// var THREE = require("three");
+/**
+ * tower.js
+ * A visual scripting system!
+ */
 
-const EInteractTypeFlags = {
-    SELECT: 1 << 0,
-    ZOOM: 1 << 1,
-    PAN: 1 << 2
+/** Flags for scene interaction modes. */
+enum EInteractTypeFlags {
+    /** Selecting nodes. */
+    SELECT = 1 << 0,
+
+    /** Zooming the camera (along Z axis.) */
+    ZOOM = 1 << 1,
+
+    /** Panning the camera (along XY plane.) */
+    PAN = 1 << 2
 }
 
+/** The entire data model during play. */
 var model = {
+    /** Scene interaction state based on human input. */
     sceneInteract: {
         /** Whether pan was started and not ended (is held.) */
         bPanStarted: false,
