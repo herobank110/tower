@@ -35,9 +35,39 @@ namespace NodeDecl {
         EXEC,
         STRING
     }
+    
+    export interface ArgParameters {
+        name?: string;
+        flowType: EArgFlowType;
+        dataType: EArgDataType;
+    }
 
-    export class NodeArg {
+    export class Arg {
 
+        private _name: string;
+        public get name(): string { return this._name; }
+
+        private _guid: string;
+        public get guid(): string { return this._guid };
+
+        private _flowType: EArgFlowType;
+        public get flowType(): EArgFlowType { return this._flowType; }
+
+        private _dataType: EArgDataType;
+        public get dataType(): EArgDataType { return this._dataType; }
+
+        constructor(params: ArgParameters) {
+            this._name = params.name ?? "";
+            this._guid = uuid.v4();
+            this._flowType = params.flowType;
+            this._dataType = params.dataType;
+        }
+
+    }
+
+    export interface NodeParameters {
+        name: string;
+        nodeType: ENodeType;
     }
 
     export class Node {
@@ -48,16 +78,21 @@ namespace NodeDecl {
         private _name: string;
         public get name(): string { return this._name; }
 
-        private _args: Array<NodeArg>;
-        public get args(): Array<NodeArg> { return this._args; }
-
         private _guid: string;
         public get guid(): string { return this._guid };
 
-        constructor({ nodeType, name }: { nodeType: ENodeType; name: string; }) {
-            this._nodeType = nodeType;
-            this._name = name;
+        private _args: Array<Arg>;
+        public get args(): Array<Arg> { return this._args; }
+
+        constructor(params: NodeParameters) {
+            this._nodeType = params.nodeType;
+            this._name = params.name;
             this._guid = uuid.v4();
+        };
+
+        public addArg(arg: Arg) {
+            this._args.push(arg);
+            // TODO: Register the arg as a pin for drawing and execution.
         }
     }
 
