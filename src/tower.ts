@@ -17,6 +17,79 @@ enum EInteractTypeFlags {
     PAN = 1 << 2
 }
 
+namespace NodeDecl {
+    export enum ENodeType {
+        EVENT,
+        FUNCTION
+    }
+
+    export enum EArgFlowType {
+        IN,
+        OUT
+    }
+
+    export enum EArgDataType {
+        EXEC,
+        STRING
+    }
+
+    export class Node {
+
+        private _nodeType: ENodeType;
+        public get nodeType(): ENodeType {
+            return this._nodeType;
+        }
+
+        private _name: string;
+        public get name(): string {
+            return this._name;
+        }
+
+
+        private _args: Array[NodeArg];
+        public get args(): Array[NodeArg] {
+            return this._args;
+        }
+
+
+        constructor(nodeDecl: string) {
+            if (nodeDecl.startsWith("EVENT")) {
+                this._nodeType = ENodeType.EVENT;
+                nodeDecl = nodeDecl.substr(5);
+            } else if (nodeDecl.startsWith("FUNCTION")) {
+                this._nodeType = ENodeType.FUNCTION;
+                nodeDecl = nodeDecl.substr(8);
+            } else {
+                throw "NodeDeclParseError: Must start with EVENT or FUNCTION";
+            }
+
+            var openParenthesisIndex = nodeDecl.indexOf('(');
+            if (openParenthesisIndex == -1)
+                throw "NodeDeclParseError: Missing opening parenthesis";
+
+            var closeParenthesisIndex = nodeDecl.indexOf(')');
+            if (closeParenthesisIndex == -1)
+                throw "NodeDeclParseError: Missing closing parenthesis";
+
+            {
+                // Remove all spaces in name.
+                let name = nodeDecl.substr(0, openParenthesisIndex);
+                while (name.indexOf(" ") != -1)
+                    name = name.replace(" ", "");
+                if (name.length == 0)
+                    throw "NodeDeclParseError: Missing node name - cannot be empty";
+
+                this._name = name;
+            }
+
+            {
+                let args = nodeDecl.substr(openParenthesisIndex + 1, closeParenthesisIndex);
+
+            }
+        }
+    }
+}
+
 //#endregion
 
 /** The entire data model during play. */
@@ -53,7 +126,7 @@ var camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1,
 // var projector = new THREE.Projector();
 var towerCanvas: HTMLCanvasElement = document.querySelector("#tower-canvas");
 
-var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas, alpha:true });
+var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas, alpha: true });
 renderer.setSize(CANVAS_SIZE.x, CANVAS_SIZE.y);
 renderer.setClearColor(0xbbbbbb);
 
@@ -66,16 +139,16 @@ camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
 
 // Create the alpha map for the rounded rectangle shape.
 var canvas = document.createElement('canvas'),
-ctx = canvas.getContext('2d');
+    ctx = canvas.getContext('2d');
 var roundRect = function (ctx, x, y, w, h, r) {
     if (w < 2 * r) r = w / 2;
     if (h < 2 * r) r = h / 2;
     ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.arcTo(x+w, y,   x+w, y+h, r);
-    ctx.arcTo(x+w, y+h, x,   y+h, r);
-    ctx.arcTo(x,   y+h, x,   y,   r);
-    ctx.arcTo(x,   y,   x+w, y,   r);
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
 }
 canvas.width = 256;
@@ -84,27 +157,31 @@ ctx.fillStyle = '#000';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 ctx.fillStyle = '#fff';
 roundRect(ctx, 0, 0, canvas.width, canvas.height, 15);
-ctx.fill();	
+ctx.fill();
 var alphaTexture = new THREE.CanvasTexture(canvas);
 
 // Create the color map.
 var canvas = document.createElement("canvas");
 canvas.width = 512;
 canvas.height = 256;
-// canvas.style.imageRendering = "pixelated";
 ctx = canvas.getContext('2d');
 ctx.fillStyle = "#efefef";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 // Top color strip.
 ctx.fillStyle = "#ea9999";
-ctx.fillRect(0,0, canvas.width, 80);
+ctx.fillRect(0, 0, canvas.width, 80);
+// Black outline around node.
+roundRect(ctx, 1, 1, canvas.width - 2, canvas.height - 2, 30);
+ctx.strokeStyle = "#000";
+ctx.lineWidth = 2;
+ctx.stroke();
 // Event name as text.
 ctx.fillStyle = "#000000";
 ctx.textAlign = "left";
 ctx.font = "36px Arial";
 ctx.fillText("Event EventName", 40, 58);
 // Exec pin
-var makePinPath = function(ctx: CanvasRenderingContext2D, x: number, y: number) {
+var makePinPath = function (ctx: CanvasRenderingContext2D, x: number, y: number) {
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(x + 30, y);
@@ -117,6 +194,14 @@ makePinPath(ctx, canvas.width - 70, 100);
 ctx.fillStyle = "#ffffff";
 ctx.fill();
 ctx.strokeStyle = "#000000";
+ctx.lineWidth = 1;
+ctx.stroke();
+// String event param pin
+makePinPath(ctx, canvas.width - 70, 150);
+ctx.fillStyle = "#eb58d8";
+ctx.fill();
+ctx.strokeStyle = "#000000";
+ctx.lineWidth = 1;
 ctx.stroke();
 
 var colorTexture = new THREE.CanvasTexture(canvas);
@@ -241,3 +326,6 @@ window.addEventListener("mouseup", function (event) {
 });
 
 //#endregion
+
+// var myNode = new NodeDecl.Node("EVENT Dog()");
+console.log(new NodeDecl.Node("EVENT Dog()"));
