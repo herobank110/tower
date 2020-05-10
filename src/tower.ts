@@ -263,7 +263,14 @@ namespace NodeDrawing {
             ctx.fillStyle = "#efefef";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             // Top color strip.
-            ctx.fillStyle = "#ea9999";
+            switch (this._node.nodeType) {
+            case NodeDecl.ENodeType.EVENT:
+                ctx.fillStyle = "#ea9999";
+                break;
+            case NodeDecl.ENodeType.FUNCTION:
+                ctx.fillStyle = "#cfe2f3";
+                break;
+            };            
             ctx.fillRect(0, 0, canvas.width, 80);
             // Black outline around node.
             CanvasHelper.roundedRect(ctx, 1, 1, canvas.width - 2, canvas.height - 2, 30);
@@ -274,7 +281,7 @@ namespace NodeDrawing {
             ctx.fillStyle = "#000000";
             ctx.textAlign = "left";
             ctx.font = "36px Arial";
-            ctx.fillText("Event EventName", 40, 58);
+            ctx.fillText(`Event ${this._node.name}`, 40, 58);
             // Exec pin
             NodeActor.makePinPath(ctx, canvas.width - 70, 100);
             ctx.fillStyle = "#ffffff";
