@@ -3,6 +3,11 @@
  * A visual scripting system!
  */
 
+// Imports
+const uuid = require("uuid");
+
+//#region TowerTypes
+
 /** Flags for scene interaction modes. */
 enum EInteractTypeFlags {
     /** Selecting nodes. */
@@ -14,6 +19,180 @@ enum EInteractTypeFlags {
     /** Panning the camera (along XY plane.) */
     PAN = 1 << 2
 }
+
+namespace NodeDecl {
+    export enum ENodeType {
+        EVENT,
+        FUNCTION
+    }
+
+    export enum EArgFlowType {
+        IN,
+        OUT
+    }
+
+    export enum EArgDataType {
+        EXEC,
+        STRING
+    }
+
+    export interface ArgParameters {
+        name?: string;
+        flowType: EArgFlowType;
+        dataType: EArgDataType;
+    }
+
+    export class Arg {
+
+        private _name: string;
+        public get name(): string { return this._name; }
+
+        private _guid: string;
+        public get guid(): string { return this._guid };
+
+        private _flowType: EArgFlowType;
+        public get flowType(): EArgFlowType { return this._flowType; }
+
+        private _dataType: EArgDataType;
+        public get dataType(): EArgDataType { return this._dataType; }
+
+        constructor(params: ArgParameters) {
+            this._name = params.name ?? "";
+            this._guid = uuid.v4();
+            this._flowType = params.flowType;
+            this._dataType = params.dataType;
+        }
+
+    }
+
+    export interface NodeParameters {
+        name: string;
+        nodeType: ENodeType;
+    }
+
+    export class Node {
+
+        private _nodeType: ENodeType;
+        public get nodeType(): ENodeType { return this._nodeType; }
+
+        private _name: string;
+        public get name(): string { return this._name; }
+
+        private _guid: string;
+        public get guid(): string { return this._guid };
+
+        private _args: Array<Arg>;
+        public get args(): Array<Arg> { return this._args; }
+
+        constructor(params: NodeParameters) {
+            this._nodeType = params.nodeType;
+            this._name = params.name;
+            this._guid = uuid.v4();
+            this._args = [];
+        };
+
+        public addArg(arg: Arg) {
+            this._args.push(arg);
+            // TODO: Register the arg as a pin for drawing and execution.
+        }
+    }
+
+    const argFlowTypeParseMap = {
+        "IN": EArgFlowType.IN,
+        "OUT": EArgFlowType.OUT
+    }
+    const argDataTypeParseMap = {
+        "EXEC": EArgDataType.EXEC,
+        "STRING": EArgDataType.STRING
+    };
+
+    class Parser {
+        public rawString: string;
+        constructor(inString) {
+            this.rawString = inString;
+        }
+        public parseLeft(parseMap): any {
+            const raw = this.rawString.trimLeft();
+            for (const key in parseMap)
+                if (raw.startsWith(key)) {
+                    // Remove what was just parsed.
+                    this.rawString = raw.substr(key.length);
+                    // Return the actual value.
+                    return parseMap[key];
+                }
+            return null;
+        }
+    }
+
+    function parseArg(argString: string): Arg {
+        var argParser = new Parser(argString);
+
+        // Parse the flow type.
+        const argFlowType = argParser.parseLeft(argFlowTypeParseMap);
+        if (argFlowType === null)
+            throw "NodeDeclParseError: Arg must start with IN or OUT";
+
+        // Parse the data type.
+        const argDataType = argParser.parseLeft(argDataTypeParseMap);
+        if (argDataType === null)
+            throw "NodeDeclParseError: Arg datatype must be EXEC or STRING";
+
+        // What's left should be the name.
+        const name = argParser.rawString.trim();
+
+        return new Arg({
+            flowType: argFlowType,
+            dataType: argDataType,
+            name: name
+        });
+    }
+
+    export function parseNode(nodeDecl: string): Node {
+        var nodeType, nodeName;
+
+        if (nodeDecl.startsWith("EVENT")) {
+            nodeType = ENodeType.EVENT;
+            nodeDecl = nodeDecl.substr(5);
+        } else if (nodeDecl.startsWith("FUNCTION")) {
+            nodeType = ENodeType.FUNCTION;
+            nodeDecl = nodeDecl.substr(8);
+        } else {
+            throw "NodeDeclParseError: Must start with EVENT or FUNCTION";
+        }
+
+        var openParenthesisIndex = nodeDecl.indexOf('(');
+        if (openParenthesisIndex == -1)
+            throw "NodeDeclParseError: Missing opening parenthesis";
+
+        var closeParenthesisIndex = nodeDecl.indexOf(')');
+        if (closeParenthesisIndex == -1)
+            throw "NodeDeclParseError: Missing closing parenthesis";
+
+        {
+            // Remove all spaces in name.
+            let name = nodeDecl.substr(0, openParenthesisIndex);
+            while (name.indexOf(" ") != -1)
+                name = name.replace(" ", "");
+            if (name.length == 0)
+                throw "NodeDeclParseError: Missing node name - cannot be empty";
+
+            nodeName = name;
+        }
+
+        var newNode = new Node({ nodeType: nodeType, name: nodeName });
+
+        const args = nodeDecl.substring(openParenthesisIndex + 1, closeParenthesisIndex);
+        args.split(",").forEach(function (argString) {
+            const newArg = parseArg(argString);
+            if (newArg !== null)
+                newNode.addArg(newArg);
+        });
+
+        return newNode;
+    }
+}
+
+//#endregion
 
 /** The entire data model during play. */
 var model = {
@@ -49,7 +228,7 @@ var camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1,
 // var projector = new THREE.Projector();
 var towerCanvas: HTMLCanvasElement = document.querySelector("#tower-canvas");
 
-var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas });
+var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas, alpha: true });
 renderer.setSize(CANVAS_SIZE.x, CANVAS_SIZE.y);
 renderer.setClearColor(0xbbbbbb);
 
@@ -58,6 +237,87 @@ gridHelper.rotation.x = Math.PI / 2;
 scene.add(gridHelper);
 
 camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
+
+
+// Create the alpha map for the rounded rectangle shape.
+var canvas = document.createElement('canvas'),
+    ctx = canvas.getContext('2d');
+var roundRect = function (ctx, x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+canvas.width = 256;
+canvas.height = 128;
+ctx.fillStyle = '#000';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+ctx.fillStyle = '#fff';
+roundRect(ctx, 0, 0, canvas.width, canvas.height, 15);
+ctx.fill();
+var alphaTexture = new THREE.CanvasTexture(canvas);
+
+// Create the color map.
+var canvas = document.createElement("canvas");
+canvas.width = 512;
+canvas.height = 256;
+ctx = canvas.getContext('2d');
+ctx.fillStyle = "#efefef";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+// Top color strip.
+ctx.fillStyle = "#ea9999";
+ctx.fillRect(0, 0, canvas.width, 80);
+// Black outline around node.
+roundRect(ctx, 1, 1, canvas.width - 2, canvas.height - 2, 30);
+ctx.strokeStyle = "#000";
+ctx.lineWidth = 2;
+ctx.stroke();
+// Event name as text.
+ctx.fillStyle = "#000000";
+ctx.textAlign = "left";
+ctx.font = "36px Arial";
+ctx.fillText("Event EventName", 40, 58);
+// Exec pin
+var makePinPath = function (ctx: CanvasRenderingContext2D, x: number, y: number) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 30, y);
+    ctx.lineTo(x + 45, y + 15);
+    ctx.lineTo(x + 30, y + 30);
+    ctx.lineTo(x, y + 30);
+    ctx.closePath();
+};
+makePinPath(ctx, canvas.width - 70, 100);
+ctx.fillStyle = "#ffffff";
+ctx.fill();
+ctx.strokeStyle = "#000000";
+ctx.lineWidth = 1;
+ctx.stroke();
+// String event param pin
+makePinPath(ctx, canvas.width - 70, 150);
+ctx.fillStyle = "#eb58d8";
+ctx.fill();
+ctx.strokeStyle = "#000000";
+ctx.lineWidth = 1;
+ctx.stroke();
+
+var colorTexture = new THREE.CanvasTexture(canvas);
+
+var material = new THREE.MeshBasicMaterial({
+    transparent: true,
+    map: colorTexture,
+    alphaMap: alphaTexture
+})
+
+var cube = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), material);
+scene.add(cube);
+
+
 
 var animate = function () {
     requestAnimationFrame(animate);
@@ -84,6 +344,8 @@ var animate = function () {
 };
 
 animate();
+
+//#region Input Handling
 
 window.addEventListener("mousemove", function (event) {
     var cameraDist = camera.position.z;
@@ -165,6 +427,11 @@ window.addEventListener("mouseup", function (event) {
     };
 });
 
-console.log(EInteractTypeFlags.SELECT);
-console.log(EInteractTypeFlags.ZOOM);
-console.log(EInteractTypeFlags.PAN);
+//#endregion
+
+// var myNode = new NodeDecl.Node("EVENT Dog()");
+var beginPlay = NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)");
+var printString = NodeDecl.parseNode("EVENT PrintString(IN EXEC, IN STRING Text, OUT EXEC)");
+var literalStringGreeting = NodeDecl.parseNode("FUNCTION LiteralStringGreeting(IN EXEC, OUT EXEC, OUT STRING HelloWorld)");
+
+console.log(beginPlay);
