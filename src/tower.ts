@@ -66,20 +66,39 @@ camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
 
 var canvas = document.createElement('canvas'),
 ctx = canvas.getContext('2d');
- 
-canvas.width = 8;
-canvas.height = 8;
-ctx.fillStyle = '#000000';
+var roundRect = function (ctx, x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y,   x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x,   y+h, r);
+    ctx.arcTo(x,   y+h, x,   y,   r);
+    ctx.arcTo(x,   y,   x+w, y,   r);
+    ctx.closePath();
+}
+canvas.width = 256;
+canvas.height = 256;
+ctx.fillStyle = '#000';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
-ctx.strokeStyle = '#ffffff';
-ctx.strokeRect(0, 0, canvas.width, canvas.height);
+ctx.fillStyle = '#fff';
+roundRect(ctx, 0, 0, canvas.width, canvas.height, 20);
+ctx.fill();
 
 	
 var texture = new THREE.CanvasTexture(canvas);
 
+// var material = new THREE.MeshLambertMaterial({
+//     emissive: new THREE.Color(0xffffff),
+//     emissiveMap: texture,
+//     transparent: true,
+//     alphaMap: texture,
+//     // opacity: 0.5
+// });
 var material = new THREE.MeshBasicMaterial({
-    map: texture
-});
+    transparent: true,
+    alphaMap: texture
+})
 
 var cube = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
 scene.add(cube);
