@@ -83,7 +83,7 @@ canvas.height = 128;
 ctx.fillStyle = '#000';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 ctx.fillStyle = '#fff';
-roundRect(ctx, 0, 0, canvas.width, canvas.height, 20);
+roundRect(ctx, 0, 0, canvas.width, canvas.height, 15);
 ctx.fill();	
 var alphaTexture = new THREE.CanvasTexture(canvas);
 
@@ -104,13 +104,16 @@ ctx.textAlign = "left";
 ctx.font = "36px Arial";
 ctx.fillText("Event EventName", 40, 58);
 // Exec pin
-ctx.beginPath();
-ctx.moveTo(canvas.width - 80, 100);
-ctx.lineTo(canvas.width - 40, 100);
-ctx.lineTo(canvas.width - 20, 115);
-ctx.lineTo(canvas.width - 40, 130);
-ctx.lineTo(canvas.width - 80, 130);
-ctx.closePath();
+var makePinPath = function(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 30, y);
+    ctx.lineTo(x + 45, y + 15);
+    ctx.lineTo(x + 30, y + 30);
+    ctx.lineTo(x, y + 30);
+    ctx.closePath();
+};
+makePinPath(ctx, canvas.width - 70, 100);
 ctx.fillStyle = "#ffffff";
 ctx.fill();
 ctx.strokeStyle = "#000000";
