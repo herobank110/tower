@@ -1,4 +1,4 @@
-var THREE = require("three");
+// var THREE = require("three");
 
 const EInteractTypeFlags = {
     SELECT: 1 << 0,
@@ -36,7 +36,7 @@ const CANVAS_SIZE = new THREE.Vector2(800, 600);
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1, 1000);
 // var projector = new THREE.Projector();
-var towerCanvas = document.querySelector("#tower-canvas");
+var towerCanvas: HTMLCanvasElement = document.querySelector("#tower-canvas");
 
 var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas });
 renderer.setSize(CANVAS_SIZE.x, CANVAS_SIZE.y);

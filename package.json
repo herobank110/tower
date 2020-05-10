@@ -13,10 +13,12 @@
   "author": "David Kanekanian",
   "license": "Copyright 2020 David Kanekanian",
   "dependencies": {
-    "three": "0.116.1",
+    "@types/node": "^13.13.5",
+    "browserify": "16.5.1",
     "pug": "2.0.4",
     "pug-cli": "1.0.0-alpha6",
-    "browserify": "16.5.1",
-    "sass": "1.26.5"
+    "sass": "1.26.5",
+    "three": "0.116.1",
+    "typescript": "^3.8.3"
   }
 }
