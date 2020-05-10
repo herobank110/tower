@@ -3,6 +3,9 @@
  * A visual scripting system!
  */
 
+// Imports
+const uuid = require("uuid");
+
 //#region TowerTypes
 
 /** Flags for scene interaction modes. */
@@ -33,60 +36,68 @@ namespace NodeDecl {
         STRING
     }
 
+    export class NodeArg {
+
+    }
+
     export class Node {
 
         private _nodeType: ENodeType;
-        public get nodeType(): ENodeType {
-            return this._nodeType;
-        }
+        public get nodeType(): ENodeType { return this._nodeType; }
 
         private _name: string;
-        public get name(): string {
-            return this._name;
+        public get name(): string { return this._name; }
+
+        private _args: Array<NodeArg>;
+        public get args(): Array<NodeArg> { return this._args; }
+
+        private _guid: string;
+        public get guid(): string { return this._guid };
+
+        constructor({ nodeType, name }: { nodeType: ENodeType; name: string; }) {
+            this._nodeType = nodeType;
+            this._name = name;
+            this._guid = uuid.v4();
+        }
+    }
+
+    export function parseNode(nodeDecl: string): Node {
+        var nodeType, nodeName;
+
+        if (nodeDecl.startsWith("EVENT")) {
+            nodeType = ENodeType.EVENT;
+            nodeDecl = nodeDecl.substr(5);
+        } else if (nodeDecl.startsWith("FUNCTION")) {
+            nodeType = ENodeType.FUNCTION;
+            nodeDecl = nodeDecl.substr(8);
+        } else {
+            throw "NodeDeclParseError: Must start with EVENT or FUNCTION";
         }
 
+        var openParenthesisIndex = nodeDecl.indexOf('(');
+        if (openParenthesisIndex == -1)
+            throw "NodeDeclParseError: Missing opening parenthesis";
 
-        private _args: Array[NodeArg];
-        public get args(): Array[NodeArg] {
-            return this._args;
+        var closeParenthesisIndex = nodeDecl.indexOf(')');
+        if (closeParenthesisIndex == -1)
+            throw "NodeDeclParseError: Missing closing parenthesis";
+
+        {
+            // Remove all spaces in name.
+            let name = nodeDecl.substr(0, openParenthesisIndex);
+            while (name.indexOf(" ") != -1)
+                name = name.replace(" ", "");
+            if (name.length == 0)
+                throw "NodeDeclParseError: Missing node name - cannot be empty";
+
+            nodeName = name;
         }
 
-
-        constructor(nodeDecl: string) {
-            if (nodeDecl.startsWith("EVENT")) {
-                this._nodeType = ENodeType.EVENT;
-                nodeDecl = nodeDecl.substr(5);
-            } else if (nodeDecl.startsWith("FUNCTION")) {
-                this._nodeType = ENodeType.FUNCTION;
-                nodeDecl = nodeDecl.substr(8);
-            } else {
-                throw "NodeDeclParseError: Must start with EVENT or FUNCTION";
-            }
-
-            var openParenthesisIndex = nodeDecl.indexOf('(');
-            if (openParenthesisIndex == -1)
-                throw "NodeDeclParseError: Missing opening parenthesis";
-
-            var closeParenthesisIndex = nodeDecl.indexOf(')');
-            if (closeParenthesisIndex == -1)
-                throw "NodeDeclParseError: Missing closing parenthesis";
-
-            {
-                // Remove all spaces in name.
-                let name = nodeDecl.substr(0, openParenthesisIndex);
-                while (name.indexOf(" ") != -1)
-                    name = name.replace(" ", "");
-                if (name.length == 0)
-                    throw "NodeDeclParseError: Missing node name - cannot be empty";
-
-                this._name = name;
-            }
-
-            {
-                let args = nodeDecl.substr(openParenthesisIndex + 1, closeParenthesisIndex);
-
-            }
+        {
+            let args = nodeDecl.substr(openParenthesisIndex + 1, closeParenthesisIndex);
         }
+
+        return new Node({ nodeType: nodeType, name: nodeName });
     }
 }
 
@@ -328,4 +339,4 @@ window.addEventListener("mouseup", function (event) {
 //#endregion
 
 // var myNode = new NodeDecl.Node("EVENT Dog()");
-console.log(new NodeDecl.Node("EVENT Dog()"));
+console.log(NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)"));
