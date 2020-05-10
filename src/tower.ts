@@ -430,4 +430,8 @@ window.addEventListener("mouseup", function (event) {
 //#endregion
 
 // var myNode = new NodeDecl.Node("EVENT Dog()");
-console.log(NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)"));
+var beginPlay = NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)");
+var printString = NodeDecl.parseNode("EVENT PrintString(IN EXEC, IN STRING Text, OUT EXEC)");
+var literalStringGreeting = NodeDecl.parseNode("FUNCTION LiteralStringGreeting(IN EXEC, OUT EXEC, OUT STRING HelloWorld)");
+
+console.log(beginPlay);
