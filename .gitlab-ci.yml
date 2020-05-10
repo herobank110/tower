@@ -21,7 +21,7 @@ pages:
     - npm install
     - mkdir build
     - ./node_modules/.bin/tsc
-    - ./node_modules/.bin/browserify src/tower.js > build/bundle.js
+    - ./node_modules/.bin/browserify build/tower.js > build/bundle.js
     - rm build/tower.js
     - ./node_modules/.bin/pug src/ --out build/
     - ./node_modules/.bin/sass src/:build/
