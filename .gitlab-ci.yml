@@ -19,15 +19,12 @@ pages:
   stage: deploy
   script:
     - npm install
-    # Create the build directory if not already there.
     - mkdir build
-    # Bundle the javascript to include three.js and other modules
+    - ./node_modules/.bin/tsc
     - ./node_modules/.bin/browserify src/tower.js > build/bundle.js
-    # Build the pug to html files
+    - rm build/tower.js
     - ./node_modules/.bin/pug src/ --out build/
-    # Build the sass to css files
     - ./node_modules/.bin/sass src/:build/
-    # Move the build folder to the gitlab pages folder
     - mv build public
   interruptible: true
   artifacts:
