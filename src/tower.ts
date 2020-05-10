@@ -64,6 +64,7 @@ scene.add(gridHelper);
 camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
 
 
+// Create the alpha map for the rounded rectangle shape.
 var canvas = document.createElement('canvas'),
 ctx = canvas.getContext('2d');
 var roundRect = function (ctx, x, y, w, h, r) {
@@ -78,29 +79,52 @@ var roundRect = function (ctx, x, y, w, h, r) {
     ctx.closePath();
 }
 canvas.width = 256;
-canvas.height = 256;
+canvas.height = 128;
 ctx.fillStyle = '#000';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 ctx.fillStyle = '#fff';
 roundRect(ctx, 0, 0, canvas.width, canvas.height, 20);
+ctx.fill();	
+var alphaTexture = new THREE.CanvasTexture(canvas);
+
+// Create the color map.
+var canvas = document.createElement("canvas");
+canvas.width = 512;
+canvas.height = 256;
+// canvas.style.imageRendering = "pixelated";
+ctx = canvas.getContext('2d');
+ctx.fillStyle = "#efefef";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+// Top color strip.
+ctx.fillStyle = "#ea9999";
+ctx.fillRect(0,0, canvas.width, 80);
+// Event name as text.
+ctx.fillStyle = "#000000";
+ctx.textAlign = "left";
+ctx.font = "36px Arial";
+ctx.fillText("Event EventName", 40, 58);
+// Exec pin
+ctx.beginPath();
+ctx.moveTo(canvas.width - 80, 100);
+ctx.lineTo(canvas.width - 40, 100);
+ctx.lineTo(canvas.width - 20, 115);
+ctx.lineTo(canvas.width - 40, 130);
+ctx.lineTo(canvas.width - 80, 130);
+ctx.closePath();
+ctx.fillStyle = "#ffffff";
 ctx.fill();
+ctx.strokeStyle = "#000000";
+ctx.stroke();
 
-	
-var texture = new THREE.CanvasTexture(canvas);
+var colorTexture = new THREE.CanvasTexture(canvas);
 
-// var material = new THREE.MeshLambertMaterial({
-//     emissive: new THREE.Color(0xffffff),
-//     emissiveMap: texture,
-//     transparent: true,
-//     alphaMap: texture,
-//     // opacity: 0.5
-// });
 var material = new THREE.MeshBasicMaterial({
     transparent: true,
-    alphaMap: texture
+    map: colorTexture,
+    alphaMap: alphaTexture
 })
 
-var cube = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+var cube = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), material);
 scene.add(cube);
 
 
