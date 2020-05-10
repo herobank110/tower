@@ -35,7 +35,7 @@ namespace NodeDecl {
         EXEC,
         STRING
     }
-    
+
     export interface ArgParameters {
         name?: string;
         flowType: EArgFlowType;
@@ -88,12 +88,63 @@ namespace NodeDecl {
             this._nodeType = params.nodeType;
             this._name = params.name;
             this._guid = uuid.v4();
+            this._args = [];
         };
 
         public addArg(arg: Arg) {
             this._args.push(arg);
             // TODO: Register the arg as a pin for drawing and execution.
         }
+    }
+
+    const argFlowTypeParseMap = {
+        "IN": EArgFlowType.IN,
+        "OUT": EArgFlowType.OUT
+    }
+    const argDataTypeParseMap = {
+        "EXEC": EArgDataType.EXEC,
+        "STRING": EArgDataType.STRING
+    };
+
+    class Parser {
+        public rawString: string;
+        constructor(inString) {
+            this.rawString = inString;
+        }
+        public parseLeft(parseMap): any {
+            const raw = this.rawString.trimLeft();
+            for (const key in parseMap)
+                if (raw.startsWith(key)) {
+                    // Remove what was just parsed.
+                    this.rawString = raw.substr(key.length);
+                    // Return the actual value.
+                    return parseMap[key];
+                }
+            return null;
+        }
+    }
+
+    function parseArg(argString: string): Arg {
+        var argParser = new Parser(argString);
+
+        // Parse the flow type.
+        const argFlowType = argParser.parseLeft(argFlowTypeParseMap);
+        if (argFlowType === null)
+            throw "NodeDeclParseError: Arg must start with IN or OUT";
+
+        // Parse the data type.
+        const argDataType = argParser.parseLeft(argDataTypeParseMap);
+        if (argDataType === null)
+            throw "NodeDeclParseError: Arg datatype must be EXEC or STRING";
+
+        // What's left should be the name.
+        const name = argParser.rawString.trim();
+
+        return new Arg({
+            flowType: argFlowType,
+            dataType: argDataType,
+            name: name
+        });
     }
 
     export function parseNode(nodeDecl: string): Node {
@@ -128,11 +179,16 @@ namespace NodeDecl {
             nodeName = name;
         }
 
-        {
-            let args = nodeDecl.substr(openParenthesisIndex + 1, closeParenthesisIndex);
-        }
+        var newNode = new Node({ nodeType: nodeType, name: nodeName });
 
-        return new Node({ nodeType: nodeType, name: nodeName });
+        const args = nodeDecl.substring(openParenthesisIndex + 1, closeParenthesisIndex);
+        args.split(",").forEach(function (argString) {
+            const newArg = parseArg(argString);
+            if (newArg !== null)
+                newNode.addArg(newArg);
+        });
+
+        return newNode;
     }
 }
 
