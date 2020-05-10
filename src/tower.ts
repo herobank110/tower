@@ -3,6 +3,8 @@
  * A visual scripting system!
  */
 
+//#region TowerTypes
+
 /** Flags for scene interaction modes. */
 enum EInteractTypeFlags {
     /** Selecting nodes. */
@@ -14,6 +16,8 @@ enum EInteractTypeFlags {
     /** Panning the camera (along XY plane.) */
     PAN = 1 << 2
 }
+
+//#endregion
 
 /** The entire data model during play. */
 var model = {
@@ -49,7 +53,7 @@ var camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1,
 // var projector = new THREE.Projector();
 var towerCanvas: HTMLCanvasElement = document.querySelector("#tower-canvas");
 
-var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas });
+var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas, alpha:true });
 renderer.setSize(CANVAS_SIZE.x, CANVAS_SIZE.y);
 renderer.setClearColor(0xbbbbbb);
 
@@ -58,6 +62,29 @@ gridHelper.rotation.x = Math.PI / 2;
 scene.add(gridHelper);
 
 camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
+
+
+var canvas = document.createElement('canvas'),
+ctx = canvas.getContext('2d');
+ 
+canvas.width = 8;
+canvas.height = 8;
+ctx.fillStyle = '#000000';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+ctx.strokeStyle = '#ffffff';
+ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+	
+var texture = new THREE.CanvasTexture(canvas);
+
+var material = new THREE.MeshBasicMaterial({
+    map: texture
+});
+
+var cube = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+scene.add(cube);
+
+
 
 var animate = function () {
     requestAnimationFrame(animate);
@@ -84,6 +111,8 @@ var animate = function () {
 };
 
 animate();
+
+//#region Input Handling
 
 window.addEventListener("mousemove", function (event) {
     var cameraDist = camera.position.z;
@@ -165,6 +194,4 @@ window.addEventListener("mouseup", function (event) {
     };
 });
 
-console.log(EInteractTypeFlags.SELECT);
-console.log(EInteractTypeFlags.ZOOM);
-console.log(EInteractTypeFlags.PAN);
+//#endregion
