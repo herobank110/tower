@@ -192,6 +192,116 @@ namespace NodeDecl {
     }
 }
 
+namespace NodeDrawing {
+    class CanvasHelper {
+        public static roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+    }
+
+    export class NodeActor {
+        private _node: NodeDecl.Node;
+        private alphaMap: THREE.Texture;
+        private colorMap: THREE.Texture;
+
+        constructor(node: NodeDecl.Node) {
+            this._node = node;
+            this.drawAlphaMap();
+            this.drawColorMap();
+            var material = new THREE.MeshBasicMaterial({
+                transparent: true,
+                map: this.colorMap,
+                alphaMap: this.alphaMap
+            })
+
+            var cube = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), material);
+            scene.add(cube);
+        }
+
+        /** Draw a pin path (IN/OUT) on the canvas at the top-left coordinates. */
+        private static makePinPath(ctx: CanvasRenderingContext2D, x: number, y: number) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + 30, y);
+            ctx.lineTo(x + 45, y + 15);
+            ctx.lineTo(x + 30, y + 30);
+            ctx.lineTo(x, y + 30);
+            ctx.closePath();
+        };
+
+        /** Create the alpha map for the rounded rectangle shape. */
+        private drawAlphaMap() {
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+            // three.js expects textures to have POT dimensions.
+            canvas.width = 256;
+            canvas.height = 128;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            CanvasHelper.roundedRect(ctx, 0, 0, canvas.width, canvas.height, 15);
+            ctx.fill();
+            this.alphaMap = new THREE.CanvasTexture(canvas);
+        }
+
+        /** Create the color map. */
+        private drawColorMap() {
+            // TODO: investigate whether to create a whole new canvas each time?
+            var canvas = document.createElement("canvas");
+            var ctx = canvas.getContext('2d');
+            canvas.width = 512;
+            canvas.height = 256;
+            ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#efefef";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Top color strip.
+            switch (this._node.nodeType) {
+            case NodeDecl.ENodeType.EVENT:
+                ctx.fillStyle = "#ea9999";
+                break;
+            case NodeDecl.ENodeType.FUNCTION:
+                ctx.fillStyle = "#cfe2f3";
+                break;
+            };            
+            ctx.fillRect(0, 0, canvas.width, 80);
+            // Black outline around node.
+            CanvasHelper.roundedRect(ctx, 1, 1, canvas.width - 2, canvas.height - 2, 30);
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // Event name as text.
+            ctx.fillStyle = "#000000";
+            ctx.textAlign = "left";
+            ctx.font = "36px Arial";
+            ctx.fillText(`Event ${this._node.name}`, 40, 58);
+            // Exec pin
+            NodeActor.makePinPath(ctx, canvas.width - 70, 100);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            // String event param pin
+            NodeActor.makePinPath(ctx, canvas.width - 70, 150);
+            ctx.fillStyle = "#eb58d8";
+            ctx.fill();
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            this.colorMap = new THREE.CanvasTexture(canvas);
+        }
+    }
+}
+
 //#endregion
 
 /** The entire data model during play. */
@@ -237,86 +347,6 @@ gridHelper.rotation.x = Math.PI / 2;
 scene.add(gridHelper);
 
 camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
-
-
-// Create the alpha map for the rounded rectangle shape.
-var canvas = document.createElement('canvas'),
-    ctx = canvas.getContext('2d');
-var roundRect = function (ctx, x, y, w, h, r) {
-    if (w < 2 * r) r = w / 2;
-    if (h < 2 * r) r = h / 2;
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-}
-canvas.width = 256;
-canvas.height = 128;
-ctx.fillStyle = '#000';
-ctx.fillRect(0, 0, canvas.width, canvas.height);
-ctx.fillStyle = '#fff';
-roundRect(ctx, 0, 0, canvas.width, canvas.height, 15);
-ctx.fill();
-var alphaTexture = new THREE.CanvasTexture(canvas);
-
-// Create the color map.
-var canvas = document.createElement("canvas");
-canvas.width = 512;
-canvas.height = 256;
-ctx = canvas.getContext('2d');
-ctx.fillStyle = "#efefef";
-ctx.fillRect(0, 0, canvas.width, canvas.height);
-// Top color strip.
-ctx.fillStyle = "#ea9999";
-ctx.fillRect(0, 0, canvas.width, 80);
-// Black outline around node.
-roundRect(ctx, 1, 1, canvas.width - 2, canvas.height - 2, 30);
-ctx.strokeStyle = "#000";
-ctx.lineWidth = 2;
-ctx.stroke();
-// Event name as text.
-ctx.fillStyle = "#000000";
-ctx.textAlign = "left";
-ctx.font = "36px Arial";
-ctx.fillText("Event EventName", 40, 58);
-// Exec pin
-var makePinPath = function (ctx: CanvasRenderingContext2D, x: number, y: number) {
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 30, y);
-    ctx.lineTo(x + 45, y + 15);
-    ctx.lineTo(x + 30, y + 30);
-    ctx.lineTo(x, y + 30);
-    ctx.closePath();
-};
-makePinPath(ctx, canvas.width - 70, 100);
-ctx.fillStyle = "#ffffff";
-ctx.fill();
-ctx.strokeStyle = "#000000";
-ctx.lineWidth = 1;
-ctx.stroke();
-// String event param pin
-makePinPath(ctx, canvas.width - 70, 150);
-ctx.fillStyle = "#eb58d8";
-ctx.fill();
-ctx.strokeStyle = "#000000";
-ctx.lineWidth = 1;
-ctx.stroke();
-
-var colorTexture = new THREE.CanvasTexture(canvas);
-
-var material = new THREE.MeshBasicMaterial({
-    transparent: true,
-    map: colorTexture,
-    alphaMap: alphaTexture
-})
-
-var cube = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), material);
-scene.add(cube);
-
 
 
 var animate = function () {
@@ -429,9 +459,10 @@ window.addEventListener("mouseup", function (event) {
 
 //#endregion
 
-// var myNode = new NodeDecl.Node("EVENT Dog()");
-var beginPlay = NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)");
-var printString = NodeDecl.parseNode("EVENT PrintString(IN EXEC, IN STRING Text, OUT EXEC)");
-var literalStringGreeting = NodeDecl.parseNode("FUNCTION LiteralStringGreeting(IN EXEC, OUT EXEC, OUT STRING HelloWorld)");
+var beginPlayDecl = NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)");
+var printStringDecl = NodeDecl.parseNode("EVENT PrintString(IN EXEC, IN STRING Text, OUT EXEC)");
+var literalStringGreetingDecl = NodeDecl.parseNode("FUNCTION LiteralStringGreeting(IN EXEC, OUT EXEC, OUT STRING HelloWorld)");
 
-console.log(beginPlay);
+var nodeActor1 = new NodeDrawing.NodeActor(beginPlayDecl);
+
+console.log(beginPlayDecl);
