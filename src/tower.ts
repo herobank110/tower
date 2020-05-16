@@ -603,44 +603,73 @@ namespace TOWER {
             testCount,
             results;
 
+        /** Register the tests that should be run. */
+        function registerAll() {
+            // All test classes must be added manually.
+            // TODO: Find a way to automate this.
+            registerTest(TestActorLifeCycle);
+        }
+
         export function runAll(): boolean {
             // Reset data before running tests.
             testsToRun = [];
             testCount = 0;
             results = {};
 
-            // Register the tests that should be run.
-            registerTest(TestActorLifeCycle);
+            registerAll();
+
             console.log("Starting Tower test suite");
+
             // Begin testing!
             testLoop(function () {
-                console.log(`Finished Tower test suite.\n Ran ${testCount} ${testCount == 1 ? "test" : "tests"}`);
+                console.log("Finished Tower test suite\n"
+                    + `Ran ${testCount} test${testCount == 1 ? "" : "s"} in total\n`
+                );
 
                 // Format the results as a table with equal width columns.
-                var maxNameLen = Math.max(9, ...Object.keys(results).map(function (val) { return val.length }));
-                var padName = function (name: string, fill = " ") { return name.padEnd(maxNameLen, fill); }
+                var maxNameLen = Math.max(
+                    9,  // Must be at least wide enough for heading.
+                    ...Object.keys(results)
+                        .map(function (val) { return val.length })
+                );
+
+                function padName(name: string, fill = " ") {
+                    return name.padEnd(maxNameLen, fill);
+                }
+
                 // Add columns to results for printing before running tests.
-                var resultTable = `${padName("Test Name")} | Passed\n${"-".repeat(maxNameLen + 9)}\n`;
-                resultTable += Object.keys(results).map(function (name) { return `${padName(name)} | ${results[name]}`; }).join("\n");
-                console.log(resultTable);
+                var resultTable = `${padName("Test Name")} | Passed\n`
+                    + `${"-".repeat(maxNameLen)}-|-${"-".repeat(6)}\n`;
+                resultTable += Object.keys(results)
+                    .map(function (name) { return `${padName(name)} | ${results[name]}`; })
+                    .join("\n");
+                console.log(resultTable + "\n");
 
                 var allPassed = passedAllTests();
-                console.log(`Summary: ${allPassed ? "All tests passed" : "One or more tests failed"}`);
+                console.log("Summary: "
+                    + (allPassed ? "All tests passed" : "One or more tests failed")
+                );
             });
             return passedAllTests();
         }
 
-        function passedAllTests() {
+        /** Returns whether all tests were passed successfully.
+         * 
+         * Only valid after running tests using `runTests()`.
+         */
+        function passedAllTests(): boolean {
             return Object.values(results).every(val => val);
         }
 
         function testLoop(testsFinishedCallback) {
             var nextTest = testsToRun.pop();
             if (nextTest !== undefined) {
-                console.log(`Running test '${nextTest.name}:`);
+                console.log(`Running test '${nextTest.name}'`);
                 runTest(nextTest, function (result) {
-                    console.log("Finished test.")
+                    console.log(`Ended test '${nextTest.name}'`)
+                    // Save the result in the results object.
                     results[nextTest.name] = result;
+                    // Continue onto the next test.
                     testLoop(testsFinishedCallback);
                 });
             } else {
