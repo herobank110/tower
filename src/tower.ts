@@ -9,15 +9,24 @@
 const uuid = require("uuid");
 
 if (process.title != "browser") {
-    // Must put in eval so Typescript doesn't get confused.
-    eval('var THREE = require("../node_modules/three/build/three.js");');
+    // Perform special tasks for Node.js to run automated tests.
 
-    // Node.js does not have 'requestAnimationFrame' function. Make it call back immediately.
-    // @ts-ignore
-    function requestAnimationFrame(callback: FrameRequestCallback): number {
-        callback(0);
-        return 0;
-    }
+    // Must put in eval so Typescript doesn't get confused. 
+    // Note: It must contain vanilla JS, not Typescript!
+
+    // Node.js can't include three.js from a CDN, so access it from
+    // local install. For the typical browser use case the file is 
+    // likely to have already been cached, so no point hosting locally.
+    eval(`var THREE = require("../node_modules/three/build/three.js");`);
+
+    // Node.js does not have 'requestAnimationFrame' function. Make one
+    // that will call back immediately.
+    eval(`
+        function requestAnimationFrame(callback) {
+            callback(0);
+            return 0;
+        }
+    `);
 }
 
 
