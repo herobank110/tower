@@ -8,6 +8,18 @@
 // Imports
 const uuid = require("uuid");
 
+if (process.title != "browser") {
+    // Must put in eval so Typescript doesn't get confused.
+    eval('var THREE = require("../node_modules/three/build/three.js");');
+
+    // Node.js does not have 'requestAnimationFrame' function. Make it call back immediately.
+    // @ts-ignore
+    function requestAnimationFrame(callback: FrameRequestCallback): number {
+        callback(0);
+        return 0;
+    }
+}
+
 
 /** This will eventually have more game engine utilities. */
 namespace GARDEN {
@@ -591,7 +603,7 @@ namespace TOWER {
             testCount,
             results;
 
-        export function runAll() {
+        export function runAll(): boolean {
             // Reset data before running tests.
             testsToRun = [];
             testCount = 0;
@@ -612,10 +624,14 @@ namespace TOWER {
                 resultTable += Object.keys(results).map(function (name) { return `${padName(name)} | ${results[name]}`; }).join("\n");
                 console.log(resultTable);
 
-                var allPassed = Object.values(results).every(val => val);
+                var allPassed = passedAllTests();
                 console.log(`Summary: ${allPassed ? "All tests passed" : "One or more tests failed"}`);
-                return allPassed;
             });
+            return passedAllTests();
+        }
+
+        function passedAllTests() {
+            return Object.values(results).every(val => val);
         }
 
         function testLoop(testsFinishedCallback) {
@@ -704,8 +720,11 @@ namespace TOWER {
 }
 
 
-// Start the main program.
-//TOWER.main();
-
-// Test the main program.
-TOWER.Testing.runAll();
+if (process.argv.indexOf("test") !== -1) {
+    // Test the main program.
+    process.exit(TOWER.Testing.runAll() ? 0 : 1);
+}
+else {
+    // Start the main program.
+    TOWER.main();
+}

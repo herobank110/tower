@@ -13,7 +13,7 @@ cache:
 test_async:
   script:
     - npm install
-    - echo Must add tests!
+    - npm test
 
 pages:
   stage: deploy

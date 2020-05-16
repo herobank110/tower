@@ -4,7 +4,8 @@
   "description": "Visual scripting on the go",
   "main": "src/tower.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsc && node build/tower.js test",
+    "start": "build"
   },
   "repository": {
     "type": "git",
