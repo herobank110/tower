@@ -4,8 +4,8 @@
   "description": "Visual scripting on the go",
   "main": "src/tower.js",
   "scripts": {
-    "test": "tsc && node build/tower.js test",
-    "start": "build"
+    "test": "npx tsc && node build/tower.js test",
+    "start": "powershell -File build.ps1"
   },
   "repository": {
     "type": "git",
