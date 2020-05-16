@@ -587,28 +587,48 @@ namespace TOWER {
     }
 
     export namespace Testing {
-        var testsToRun = [];
-        var testCount = 0;
-        var results = {};
+        var testsToRun,
+            testCount,
+            results;
 
         export function runAll() {
+            // Reset data before running tests.
+            testsToRun = [];
+            testCount = 0;
+            results = {};
+
+            // Register the tests that should be run.
             registerTest(TestActorLifeCycle);
             console.log("Starting Tower test suite");
-            testLoop();
+            // Begin testing!
+            testLoop(function () {
+                console.log(`Finished Tower test suite.\n Ran ${testCount} ${testCount == 1 ? "test" : "tests"}`);
+
+                // Format the results as a table with equal width columns.
+                var maxNameLen = Math.max(9, ...Object.keys(results).map(function (val) { return val.length }));
+                var padName = function (name: string, fill = " ") { return name.padEnd(maxNameLen, fill); }
+                // Add columns to results for printing before running tests.
+                var resultTable = `${padName("Test Name")} | Passed\n${"-".repeat(maxNameLen + 9)}\n`;
+                resultTable += Object.keys(results).map(function (name) { return `${padName(name)} | ${results[name]}`; }).join("\n");
+                console.log(resultTable);
+
+                var allPassed = Object.values(results).every(val => val);
+                console.log(`Summary: ${allPassed ? "All tests passed" : "One or more tests failed"}`);
+                return allPassed;
+            });
         }
 
-        function testLoop() {
+        function testLoop(testsFinishedCallback) {
             var nextTest = testsToRun.pop();
             if (nextTest !== undefined) {
                 console.log(`Running test '${nextTest.name}:`);
                 runTest(nextTest, function (result) {
                     console.log("Finished test.")
                     results[nextTest.name] = result;
-                    testLoop();
+                    testLoop(testsFinishedCallback);
                 });
             } else {
-                console.log(`Finished ${testCount} ${testCount == 1 ? "test" : "tests"}`);
-                console.log("Results:\n" + JSON.stringify(results));
+                testsFinishedCallback()
             }
         }
 
