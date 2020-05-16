@@ -12,7 +12,7 @@ const uuid = require("uuid");
 /** This will eventually have more game engine utilities. */
 namespace GARDEN {
     /** Provides basic gameplay life cycle functionality. */
-    export class Actor extends THREE.Group { 
+    export class Actor extends THREE.Group {
         private _bIsPendingKill: boolean;
 
         /** Whether this actor is currently pending kill. */
@@ -20,7 +20,7 @@ namespace GARDEN {
 
         /** Called when gameplay ready. */
         public beginPlay(): void { };
-        
+
         /** Called once every frame */
         public tick(deltaTime: number): void { };
 
@@ -56,11 +56,18 @@ namespace GARDEN {
         }
 
         /** Start the loop of rendering to make actors tick. */
-        public mainLoop() {
-            var a = this;
-            requestAnimationFrame(function () { a.mainLoop(); });
+        public mainLoop(gameOverCallback?) {
             this.masterTickActors();
             this.purgePendingKill();
+
+            if (gameOverCallback !== undefined && this.masterActorList.length == 0) {
+                // No more actors in world. Stop everything and call the callback.
+                gameOverCallback();
+                return;
+            }
+
+            var a = this;
+            requestAnimationFrame(function () { a.mainLoop(gameOverCallback); });
         }
 
         private masterTickActors() {
@@ -578,8 +585,107 @@ namespace TOWER {
 
         world.mainLoop(); // Should be in GameplayUtilities
     }
+
+    export namespace Testing {
+        var testsToRun = [];
+        var testCount = 0;
+        var results = {};
+
+        export function runAll() {
+            registerTest(TestActorLifeCycle);
+            console.log("Starting Tower test suite");
+            testLoop();
+        }
+
+        function testLoop() {
+            var nextTest = testsToRun.pop();
+            if (nextTest !== undefined) {
+                console.log(`Running test '${nextTest.name}:`);
+                runTest(nextTest, function (result) {
+                    console.log("Finished test.")
+                    results[nextTest.name] = result;
+                    testLoop();
+                });
+            } else {
+                console.log(`Finished ${testCount} ${testCount == 1 ? "test" : "tests"}`);
+                console.log("Results:\n" + JSON.stringify(results));
+            }
+        }
+
+        function registerTest(testClass) {
+            testsToRun.push(testClass);
+            testCount++;
+        }
+
+        function runTest(testClass, testOverCallback) {
+            var testCase = new testClass();
+            testCase.runTest(testOverCallback);
+        }
+
+        abstract class TestBase {
+            public abstract runTest(testOverCallback): void;
+        }
+
+        function areArraysEqual(a: Array<any>, b: Array<any>): boolean {
+            return a.every(function (val, idx) { return val === b[idx]; });
+        }
+
+        // Should log 1 to 10 then stop logging.
+        class TestActorLifeCycle extends TestBase {
+            public runTest(testOverCallback) {
+                var tickCount: number;
+                var activity = [];
+
+                class TestDestroy extends GARDEN.Actor {
+                    public constructor() {
+                        super();
+                        tickCount = -1;
+                        activity.push("default constructed");
+                    }
+                    public beginPlay() {
+                        super.beginPlay();
+                        tickCount = 0;
+                        activity.push("begun play");
+                    }
+                    public tick() {
+                        console.log(++tickCount);
+                        activity.push(`ticked ${tickCount}th time`);
+                        if (tickCount >= 5)
+                            // Destroy this actor. As it's the only
+                            // one in the world, the world will be
+                            // destroyed and end the test.
+                            this.world.destroyActor(this);
+                    }
+                    public beginDestroy() {
+                        super.beginDestroy();
+                        activity.push("begun destruction");
+                    }
+                }
+                var world = new GARDEN.World();
+                world.spawnActor(TestDestroy, new THREE.Vector3(0, 0, 0));
+                world.mainLoop(function () {
+                    // World should be destroyed when actor ticked 5 times.
+                    testOverCallback(
+                        areArraysEqual(activity, [
+                            "default constructed",
+                            "begun play",
+                            "ticked 1th time",
+                            "ticked 2th time",
+                            "ticked 3th time",
+                            "ticked 4th time",
+                            "ticked 5th time",
+                            "begun destruction",
+                        ])
+                    );
+                });
+            }
+        }
+    }
 }
 
 
 // Start the main program.
-TOWER.main();
+//TOWER.main();
+
+// Test the main program.
+TOWER.Testing.runAll();
