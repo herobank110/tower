@@ -9,6 +9,76 @@
 const uuid = require("uuid");
 
 
+/** This will eventually have more game engine utilities. */
+namespace GARDEN {
+    /** Provides basic gameplay life cycle functionality. */
+    export class Actor extends THREE.Group {
+        /** Called when gameplay ready. */
+        public beginPlay(): void { };
+        /** Called once every frame */
+        public tick(deltaTime: number): void { };
+        /** Called when destruction requested. */
+        public beginDestroy(): void { };
+
+        /** Internally called by world when spawned. */
+        public __spawn__(inWorld: World, position: THREE.Vector3) {
+            this._world = inWorld;
+            this.position.copy(position);
+        }
+
+        private _world: World;
+        public get world(): World {
+            return this._world;
+        }
+    }
+
+    /** Facilitates actor creation and destruction. */
+    export class World extends THREE.Scene {
+        private masterActorList: Array<Actor>;
+
+        /** Time between each frame, assuming 60 fps. */
+        private readonly frameTime = 1000 / 60;
+
+        public constructor() {
+            super();
+            this.masterActorList = [];
+        }
+
+        /** Start the loop of rendering to make actors tick. */
+        public mainLoop() {
+            var a = this;
+            requestAnimationFrame(function () { a.mainLoop(); });
+            this.masterTickActors();
+        }
+
+        private masterTickActors() {
+            for (const actor of this.masterActorList) {
+                actor.tick(this.frameTime);
+            }
+        }
+
+        /** Create an actor an return when gameplay ready. */
+        public spawnActor(actorClass, position: THREE.Vector3): Actor {
+            return this.finishDeferredSpawnActor(this.deferredSpawnActor(actorClass, position));
+        }
+
+        public deferredSpawnActor(actorClass, position: THREE.Vector3): Actor {
+            var newActor: Actor = new actorClass();
+            newActor.__spawn__(this, position);
+            return newActor;
+        }
+
+        public finishDeferredSpawnActor(actorObject): Actor {
+            // Call gameplay ready function.
+            actorObject.beginPlay();
+            // Let it receive tick updates.
+            this.masterActorList.push(actorObject);
+            return actorObject;
+        }
+    }
+}
+
+
 /**
  * tower.js
  * 
@@ -233,7 +303,7 @@ namespace TOWER {
                 })
 
                 var cube = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), material);
-                scene.add(cube);
+                world.add(cube);
             }
 
             /** Draw a pin path (IN/OUT) on the canvas at the top-left coordinates. */
@@ -339,140 +409,152 @@ namespace TOWER {
         }
     };
 
-    const CANVAS_SIZE = new THREE.Vector2(800, 600);
+    class RenderManager extends GARDEN.Actor {
+        public tick(deltaTime: number) {
+            if (!model.sceneInteract.bMovedCameraSinceInteract
+                && model.sceneInteract.bJustReleasedPan
+            ) {
+                // Open the node palette.
+                console.log("Opening node palette");
+            }
 
-    var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1, 1000);
-    // var projector = new THREE.Projector();
-    var towerCanvas: HTMLCanvasElement = document.querySelector("#tower-canvas");
+            renderer.render(world, camera);
 
-    var renderer = new THREE.WebGLRenderer({ canvas: towerCanvas, alpha: true });
-    renderer.setSize(CANVAS_SIZE.x, CANVAS_SIZE.y);
-    renderer.setClearColor(0xbbbbbb);
+            if (!model.sceneInteract.bMovementHadZoom
+                || !model.sceneInteract.bAnyInteractStarted
+            ) {
+                document.exitPointerLock();
+            }
 
-    var gridHelper = new THREE.GridHelper(100, 100);
-    gridHelper.rotation.x = Math.PI / 2;
-    scene.add(gridHelper);
-
-    camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
-
-
-    var animate = function () {
-        requestAnimationFrame(animate);
-
-        if (!model.sceneInteract.bMovedCameraSinceInteract
-            && model.sceneInteract.bJustReleasedPan
-        ) {
-            // Open the node palette.
-            console.log("Opening node palette");
-        }
-
-        renderer.render(scene, camera);
-
-        if (!model.sceneInteract.bMovementHadZoom
-            || !model.sceneInteract.bAnyInteractStarted
-        ) {
-            document.exitPointerLock();
-        }
-
-        // Reset per-frame state.
-        model.sceneInteract.bJustMovedCamera = false;
-        model.sceneInteract.bJustReleasedPan = false;
-        model.sceneInteract.bJustZoomed = false;
-    };
-
-    animate();
-
-    //#region Input Handling
-
-    window.addEventListener("mousemove", function (event) {
-        var cameraDist = camera.position.z;
-        function pan() {
-            camera.position.x -= event.movementX * 0.0026 * cameraDist;
-            camera.position.y += event.movementY * 0.0026 * cameraDist;
-            model.sceneInteract.bMovementHadZoom = false;
+            // Reset per-frame state.
+            model.sceneInteract.bJustMovedCamera = false;
+            model.sceneInteract.bJustReleasedPan = false;
+            model.sceneInteract.bJustZoomed = false;
         };
+    }
 
-        function zoom() {
-            // Set the true float zoom level in the model but clamp to a
-            // 'ratchet' system for the camera position.
-            var oldDist = model.sceneInteract.trueCameraZ;
-            var newDist = oldDist - event.movementX * 0.0018 * cameraDist;
-            newDist = THREE.MathUtils.clamp(newDist, 2, 20);
-            model.sceneInteract.trueCameraZ = newDist;
+    // Declare all 'global' TOWER namespace variables. TODO: move to model
+    export var world: GARDEN.World,
+        camera: THREE.Camera,
+        towerCanvas: HTMLCanvasElement,
+        renderer: THREE.WebGLRenderer,
+        gridHelper: THREE.GridHelper;
 
-            // Clamp the camera to a 'grid' system.
-            camera.position.z = Math.floor(newDist);
+    function bindInput() {
+        window.addEventListener("mousemove", function (event) {
+            var cameraDist = camera.position.z;
+            function pan() {
+                camera.position.x -= event.movementX * 0.0026 * cameraDist;
+                camera.position.y += event.movementY * 0.0026 * cameraDist;
+                model.sceneInteract.bMovementHadZoom = false;
+            };
 
-            towerCanvas.requestPointerLock();
-            model.sceneInteract.bJustZoomed = true;
-            model.sceneInteract.bMovementHadZoom = true;
-        };
+            function zoom() {
+                // Set the true float zoom level in the model but clamp to a
+                // 'ratchet' system for the camera position.
+                var oldDist = model.sceneInteract.trueCameraZ;
+                var newDist = oldDist - event.movementX * 0.0018 * cameraDist;
+                newDist = THREE.MathUtils.clamp(newDist, 2, 20);
+                model.sceneInteract.trueCameraZ = newDist;
 
-        if (model.sceneInteract.bSelectStarted && model.sceneInteract.bPanStarted) {
-            zoom()
-        } else if (model.sceneInteract.bPanStarted) {
-            pan()
-        } else if (model.sceneInteract.bZoomStarted) {
-            zoom()
-        } else {
-            return;
-        }
+                // Clamp the camera to a 'grid' system.
+                camera.position.z = Math.floor(newDist);
 
-        // Notify the input system that the camera was moved.
-        model.sceneInteract.bJustMovedCamera = true;
-        model.sceneInteract.bMovedCameraSinceInteract = true;
-    });
+                towerCanvas.requestPointerLock();
+                model.sceneInteract.bJustZoomed = true;
+                model.sceneInteract.bMovementHadZoom = true;
+            };
 
-    // Don't show the normal right click menu on the canvas.
-    towerCanvas.addEventListener('contextmenu', event => event.preventDefault());
+            if (model.sceneInteract.bSelectStarted && model.sceneInteract.bPanStarted) {
+                zoom()
+            } else if (model.sceneInteract.bPanStarted) {
+                pan()
+            } else if (model.sceneInteract.bZoomStarted) {
+                zoom()
+            } else {
+                return;
+            }
 
-    towerCanvas.addEventListener("mousedown", function (event) {
-        model.sceneInteract.bMovedCameraSinceInteract = false;
-        switch (event.which) {
-            case 1:
-                model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.SELECT;
-                model.sceneInteract.bSelectStarted = true;
-                break;
-            case 2:
-                model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.ZOOM;
-                model.sceneInteract.bZoomStarted = true;
-                break;
-            case 3:
-                model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.PAN;
-                model.sceneInteract.bPanStarted = true;
-                break;
-        };
-    });
+            // Notify the input system that the camera was moved.
+            model.sceneInteract.bJustMovedCamera = true;
+            model.sceneInteract.bMovedCameraSinceInteract = true;
+        });
 
-    // We want to know whenever the key was released over the entire window.
-    window.addEventListener("mouseup", function (event) {
-        event.preventDefault();
-        switch (event.which) {
-            case 1:
-                model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.SELECT;
-                model.sceneInteract.bSelectStarted = false;
-                break;
-            case 2:
-                model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.ZOOM;
-                model.sceneInteract.bZoomStarted = false;
-                break;
-            case 3:
-                model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.PAN;
-                model.sceneInteract.bPanStarted = false;
-                model.sceneInteract.bJustReleasedPan = true;
-                break;
-        };
-    });
+        // Don't show the normal right click menu on the canvas.
+        towerCanvas.addEventListener('contextmenu', event => event.preventDefault());
 
-    //#endregion
+        towerCanvas.addEventListener("mousedown", function (event) {
+            model.sceneInteract.bMovedCameraSinceInteract = false;
+            switch (event.which) {
+                case 1:
+                    model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.SELECT;
+                    model.sceneInteract.bSelectStarted = true;
+                    break;
+                case 2:
+                    model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.ZOOM;
+                    model.sceneInteract.bZoomStarted = true;
+                    break;
+                case 3:
+                    model.sceneInteract.bAnyInteractStarted |= EInteractTypeFlags.PAN;
+                    model.sceneInteract.bPanStarted = true;
+                    break;
+            };
+        });
 
-    var beginPlayDecl = NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)");
-    var printStringDecl = NodeDecl.parseNode("EVENT PrintString(IN EXEC, IN STRING Text, OUT EXEC)");
-    var literalStringGreetingDecl = NodeDecl.parseNode("FUNCTION LiteralStringGreeting(IN EXEC, OUT EXEC, OUT STRING HelloWorld)");
+        // We want to know whenever the key was released over the entire window.
+        window.addEventListener("mouseup", function (event) {
+            event.preventDefault();
+            switch (event.which) {
+                case 1:
+                    model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.SELECT;
+                    model.sceneInteract.bSelectStarted = false;
+                    break;
+                case 2:
+                    model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.ZOOM;
+                    model.sceneInteract.bZoomStarted = false;
+                    break;
+                case 3:
+                    model.sceneInteract.bAnyInteractStarted &= ~EInteractTypeFlags.PAN;
+                    model.sceneInteract.bPanStarted = false;
+                    model.sceneInteract.bJustReleasedPan = true;
+                    break;
+            };
+        });
+    }
 
-    var nodeActor1 = new NodeDrawing.NodeActor(beginPlayDecl);
+    export function main() {
+        const CANVAS_SIZE = new THREE.Vector2(800, 600);
 
-    console.log(beginPlayDecl);
+        world = new GARDEN.World();
+        camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.x / CANVAS_SIZE.y, 0.1, 1000);
+        towerCanvas = document.querySelector("#tower-canvas");
 
+        renderer = new THREE.WebGLRenderer({ canvas: towerCanvas, alpha: true });
+        renderer.setSize(CANVAS_SIZE.x, CANVAS_SIZE.y);
+        renderer.setClearColor(0xbbbbbb);
+
+        gridHelper = new THREE.GridHelper(100, 100);
+        gridHelper.rotation.x = Math.PI / 2;
+        world.add(gridHelper);
+
+        camera.position.z = Math.floor(model.sceneInteract.trueCameraZ);
+
+        world.spawnActor(RenderManager, new THREE.Vector3(0, 0, 0));
+
+        bindInput();
+
+        var beginPlayDecl = NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)");
+        var printStringDecl = NodeDecl.parseNode("EVENT PrintString(IN EXEC, IN STRING Text, OUT EXEC)");
+        var literalStringGreetingDecl = NodeDecl.parseNode("FUNCTION LiteralStringGreeting(IN EXEC, OUT EXEC, OUT STRING HelloWorld)");
+    
+        var nodeActor1 = new NodeDrawing.NodeActor(beginPlayDecl);
+    
+        console.log(beginPlayDecl);
+
+        world.mainLoop(); // Should be in GameplayUtilities
+    }
 }
+
+
+// Start the main program.
+TOWER.main();
