@@ -1,6 +1,6 @@
 # Create the build directory if not already there.
 if (!(Test-Path build)) {
-    New-Item build
+    New-Item build -ItemType directory
 }
 
 # Compile typescript files and combine into one file
