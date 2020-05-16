@@ -12,13 +12,22 @@ const uuid = require("uuid");
 /** This will eventually have more game engine utilities. */
 namespace GARDEN {
     /** Provides basic gameplay life cycle functionality. */
-    export class Actor extends THREE.Group {
+    export class Actor extends THREE.Group { 
+        private _bIsPendingKill: boolean;
+
+        /** Whether this actor is currently pending kill. */
+        public get isPendingKill() { return this._bIsPendingKill; }
+
         /** Called when gameplay ready. */
         public beginPlay(): void { };
+        
         /** Called once every frame */
         public tick(deltaTime: number): void { };
+
         /** Called when destruction requested. */
-        public beginDestroy(): void { };
+        public beginDestroy(): void {
+            this._bIsPendingKill = true;
+        };
 
         /** Internally called by world when spawned. */
         public __spawn__(inWorld: World, position: THREE.Vector3) {
@@ -35,6 +44,7 @@ namespace GARDEN {
     /** Facilitates actor creation and destruction. */
     export class World extends THREE.Scene {
         private masterActorList: Array<Actor>;
+        private pendingKill: Array<Actor>;
 
         /** Time between each frame, assuming 60 fps. */
         private readonly frameTime = 1000 / 60;
@@ -42,6 +52,7 @@ namespace GARDEN {
         public constructor() {
             super();
             this.masterActorList = [];
+            this.pendingKill = [];
         }
 
         /** Start the loop of rendering to make actors tick. */
@@ -49,6 +60,7 @@ namespace GARDEN {
             var a = this;
             requestAnimationFrame(function () { a.mainLoop(); });
             this.masterTickActors();
+            this.purgePendingKill();
         }
 
         private masterTickActors() {
@@ -74,6 +86,19 @@ namespace GARDEN {
             // Let it receive tick updates.
             this.masterActorList.push(actorObject);
             return actorObject;
+        }
+
+        public destroyActor(actor: Actor) {
+            // Javascript garbage collector will not engage until removing all references!
+            actor.beginDestroy();
+            this.masterActorList.splice(this.masterActorList.indexOf(actor), 1);
+            this.pendingKill.push(actor);
+        }
+
+        private purgePendingKill() {
+            // Clear the pending kill array, hopefully removing the last reference to actors
+            // pending destruction, letting them be garbage collected.
+            this.pendingKill.splice(0, this.pendingKill.length);
         }
     }
 }
@@ -546,9 +571,9 @@ namespace TOWER {
         var beginPlayDecl = NodeDecl.parseNode("EVENT BeginPlay(OUT EXEC)");
         var printStringDecl = NodeDecl.parseNode("EVENT PrintString(IN EXEC, IN STRING Text, OUT EXEC)");
         var literalStringGreetingDecl = NodeDecl.parseNode("FUNCTION LiteralStringGreeting(IN EXEC, OUT EXEC, OUT STRING HelloWorld)");
-    
+
         var nodeActor1 = new NodeDrawing.NodeActor(beginPlayDecl);
-    
+
         console.log(beginPlayDecl);
 
         world.mainLoop(); // Should be in GameplayUtilities
