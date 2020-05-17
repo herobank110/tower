@@ -696,8 +696,12 @@ namespace TOWER {
             testCase.runTest(testOverCallback);
         }
 
+        interface TestOverCallback {
+            (passed: boolean): void;
+        }
+
         abstract class TestBase {
-            public abstract runTest(testOverCallback): void;
+            public abstract runTest(testOverCallback: TestOverCallback): void;
         }
 
         function areArraysEqual(a: Array<any>, b: Array<any>): boolean {
@@ -706,7 +710,7 @@ namespace TOWER {
 
         // Should log 1 to 10 then stop logging.
         class TestActorLifeCycle extends TestBase {
-            public runTest(testOverCallback) {
+            public runTest(testOverCallback: TestOverCallback) {
                 var tickCount: number;
                 var activity = [];
 
@@ -741,14 +745,9 @@ namespace TOWER {
                     // World should be destroyed when actor ticked 5 times.
                     testOverCallback(
                         areArraysEqual(activity, [
-                            "default constructed",
-                            "begun play",
-                            "ticked 1th time",
-                            "ticked 2th time",
-                            "ticked 3th time",
-                            "ticked 4th time",
-                            "ticked 5th time",
-                            "begun destruction",
+                            "default constructed", "begun play", "ticked 1th time",
+                            "ticked 2th time", "ticked 3th time", "ticked 4th time",
+                            "ticked 5th time", "begun destruction"
                         ])
                     );
                 });
