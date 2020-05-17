@@ -98,17 +98,18 @@ namespace GARDEN {
         }
 
         /** Create an actor an return when gameplay ready. */
-        public spawnActor(actorClass, position: THREE.Vector3): Actor {
+        public spawnActor<ActorType extends Actor>(actorClass: typeof Actor, position: THREE.Vector3): ActorType {
             return this.finishDeferredSpawnActor(this.deferredSpawnActor(actorClass, position));
         }
 
-        public deferredSpawnActor(actorClass, position: THREE.Vector3): Actor {
-            var newActor: Actor = new actorClass();
+        // type ActorType = typeof Actor;
+        public deferredSpawnActor<ActorType extends Actor>(actorClass: typeof Actor, position: THREE.Vector3): ActorType {
+            var newActor: ActorType = (new actorClass() as ActorType);
             newActor.__spawn__(this, position);
             return newActor;
         }
 
-        public finishDeferredSpawnActor(actorObject): Actor {
+        public finishDeferredSpawnActor<ActorType extends Actor>(actorObject: ActorType): ActorType {
             // Call gameplay ready function.
             actorObject.beginPlay();
             // Let it receive tick updates.
@@ -340,23 +341,33 @@ namespace TOWER {
             }
         }
 
-        export class NodeActor {
-            private _node: NodeDecl.Node;
+        export class NodeActor extends GARDEN.Actor {
+            public get nodeDecl(): NodeDecl.Node { return this._nodeDecl; }
+            public set nodeDecl(v: NodeDecl.Node) { this._nodeDecl = v; }
+            private _nodeDecl: NodeDecl.Node;
             private alphaMap: THREE.Texture;
             private colorMap: THREE.Texture;
 
-            constructor(node: NodeDecl.Node) {
-                this._node = node;
-                this.drawAlphaMap();
-                this.drawColorMap();
-                var material = new THREE.MeshBasicMaterial({
-                    transparent: true,
-                    map: this.colorMap,
-                    alphaMap: this.alphaMap
-                })
+            constructor() {
+                super();
+                this._nodeDecl = null;
+            }
 
-                var cube = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), material);
-                world.add(cube);
+            public beginPlay() {
+                super.beginPlay();
+                if (this._nodeDecl !== null) {
+
+                    this.drawAlphaMap();
+                    this.drawColorMap();
+                    var material = new THREE.MeshBasicMaterial({
+                        transparent: true,
+                        map: this.colorMap,
+                        alphaMap: this.alphaMap
+                    })
+
+                    var cube = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), material);
+                    this.add(cube);
+                }
             }
 
             /** Draw a pin path (IN/OUT) on the canvas at the top-left coordinates. */
@@ -396,7 +407,7 @@ namespace TOWER {
                 ctx.fillStyle = "#efefef";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 // Top color strip.
-                switch (this._node.nodeType) {
+                switch (this._nodeDecl.nodeType) {
                     case NodeDecl.ENodeType.EVENT:
                         ctx.fillStyle = "#ea9999";
                         break;
@@ -414,7 +425,7 @@ namespace TOWER {
                 ctx.fillStyle = "#000000";
                 ctx.textAlign = "left";
                 ctx.font = "36px Arial";
-                ctx.fillText(`Event ${this._node.name}`, 40, 58);
+                ctx.fillText(`Event ${this._nodeDecl.name}`, 40, 58);
                 // Exec pin
                 NodeActor.makePinPath(ctx, canvas.width - 70, 100);
                 ctx.fillStyle = "#ffffff";
@@ -473,7 +484,7 @@ namespace TOWER {
                 // Open the node palette.
                 if (fucus) document.body.removeChild(fucus);
                 fucus = document.createElement("input");
-                
+
                 // Take keyboard input focus.
                 setTimeout(function () { fucus.focus(); }, 0);
 
@@ -482,9 +493,14 @@ namespace TOWER {
                     if (event.key === "Enter") {
                         try {
                             var nodeDecl = NodeDecl.parseNode(this.value);
-                            var nodeActor1 = new NodeDrawing.NodeActor(nodeDecl);
+                            var nodeActor = world.deferredSpawnActor<NodeDrawing.NodeActor>(
+                                NodeDrawing.NodeActor,
+                                new THREE.Vector3(model.sceneInteract.lastMousePosition.x, model.sceneInteract.lastMousePosition.y, 0)
+                            );
+                            nodeActor.nodeDecl = nodeDecl;
+                            world.finishDeferredSpawnActor(nodeActor);
                         } catch (error) {
-                            console.log(error);                            
+                            console.log(error);
                         }
                         document.body.removeChild(fucus);
                         fucus = null;
