@@ -110,10 +110,12 @@ namespace GARDEN {
         }
 
         public finishDeferredSpawnActor<ActorType extends Actor>(actorObject: ActorType): ActorType {
-            // Call gameplay ready function.
-            actorObject.beginPlay();
             // Let it receive tick updates.
             this.masterActorList.push(actorObject);
+            // Attach to scene so it can be rendered.
+            this.add(actorObject);
+            // Call gameplay ready function.
+            actorObject.beginPlay();
             return actorObject;
         }
 
@@ -495,7 +497,9 @@ namespace TOWER {
                             var nodeDecl = NodeDecl.parseNode(this.value);
                             var nodeActor = world.deferredSpawnActor<NodeDrawing.NodeActor>(
                                 NodeDrawing.NodeActor,
-                                new THREE.Vector3(model.sceneInteract.lastMousePosition.x, model.sceneInteract.lastMousePosition.y, 0)
+                                // Needs to transform screen to world space. Spawn at origin for now.
+                                // new THREE.Vector3(model.sceneInteract.lastMousePosition.x, model.sceneInteract.lastMousePosition.y, 0)
+                                new THREE.Vector3(0, 0, 0)
                             );
                             nodeActor.nodeDecl = nodeDecl;
                             world.finishDeferredSpawnActor(nodeActor);
