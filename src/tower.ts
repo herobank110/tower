@@ -458,17 +458,44 @@ namespace TOWER {
             /** Whether any zoom occurred this frame. */
             bJustZoomed: false,
             /** Whether the most recent movement included zoom. */
-            bMovementHadZoom: false
+            bMovementHadZoom: false,
+            /** Last detected canvas-relative mouse coordinates. */
+            lastMousePosition: new THREE.Vector2(0, 0)
         }
     };
 
+    var fucus: HTMLInputElement;
     class RenderManager extends GARDEN.Actor {
         public tick(deltaTime: number) {
             if (!model.sceneInteract.bMovedCameraSinceInteract
                 && model.sceneInteract.bJustReleasedPan
             ) {
                 // Open the node palette.
-                console.log("Opening node palette");
+                if (fucus) document.body.removeChild(fucus);
+                fucus = document.createElement("input");
+                
+                // Take keyboard input focus.
+                setTimeout(function () { fucus.focus(); }, 0);
+
+                // Create node when enter pressed.
+                fucus.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter") {
+                        try {
+                            var nodeDecl = NodeDecl.parseNode(this.value);
+                            var nodeActor1 = new NodeDrawing.NodeActor(nodeDecl);
+                        } catch (error) {
+                            console.log(error);                            
+                        }
+                        document.body.removeChild(fucus);
+                        fucus = null;
+                    }
+                });
+
+                // Attach to wherever the mouse is positioned.
+                fucus.style.position = "absolute";
+                fucus.style.left = model.sceneInteract.lastMousePosition.x + "px";
+                fucus.style.top = model.sceneInteract.lastMousePosition.y + "px";
+                document.body.appendChild(fucus);
             }
 
             renderer.render(world, camera);
@@ -495,7 +522,6 @@ namespace TOWER {
 
     function bindInput() {
         window.addEventListener("mousemove", function (event) {
-            var cameraDist = camera.position.z;
             function pan() {
                 camera.position.x -= event.movementX * 0.0026 * cameraDist;
                 camera.position.y += event.movementY * 0.0026 * cameraDist;
@@ -518,6 +544,12 @@ namespace TOWER {
                 model.sceneInteract.bMovementHadZoom = true;
             };
 
+            // Update the last known mouse position.
+            model.sceneInteract.lastMousePosition.x = event.pageX;
+            model.sceneInteract.lastMousePosition.y = event.pageY;
+
+            // Perform camera manipulations.
+            var cameraDist = camera.position.z;
             if (model.sceneInteract.bSelectStarted && model.sceneInteract.bPanStarted) {
                 zoom()
             } else if (model.sceneInteract.bPanStarted) {
@@ -600,7 +632,7 @@ namespace TOWER {
         var printStringDecl = NodeDecl.parseNode("EVENT PrintString(IN EXEC, IN STRING Text, OUT EXEC)");
         var literalStringGreetingDecl = NodeDecl.parseNode("FUNCTION LiteralStringGreeting(IN EXEC, OUT EXEC, OUT STRING HelloWorld)");
 
-        var nodeActor1 = new NodeDrawing.NodeActor(beginPlayDecl);
+        // var nodeActor1 = new NodeDrawing.NodeActor(beginPlayDecl);
 
         console.log(beginPlayDecl);
 
