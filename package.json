@@ -4,7 +4,7 @@
   "description": "Visual scripting on the go",
   "main": "src/tower.js",
   "scripts": {
-    "start": "npx tsc && npx browserify build/tower.js -o build/towerBundle.js && npx pug src/ --out build/ && npx sass src/:build/",
+    "start": "npx tsc && npx browserify build/tower.js -o build/tower.js && npx pug src/ --out build/ && npx sass src/:build/",
     "test": "npx tsc && node build/tower.js test"
   },
   "repository": {
