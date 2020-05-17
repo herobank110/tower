@@ -4,8 +4,8 @@
   "description": "Visual scripting on the go",
   "main": "src/tower.js",
   "scripts": {
-    "test": "npx tsc && node build/tower.js test",
-    "start": "powershell -File build.ps1"
+    "start": "npx tsc && npx browserify build/tower.js -o build/tower.js && npx pug src/ --out build/ && npx sass src/:build/",
+    "test": "npx tsc && node build/tower.js test"
   },
   "repository": {
     "type": "git",
@@ -19,6 +19,7 @@
     "pug": "2.0.4",
     "pug-cli": "1.0.0-alpha6",
     "sass": "1.26.5",
+    "start": "^5.1.0",
     "three": "0.116.1",
     "typescript": "^3.8.3",
     "uuid": "^8.0.0"
