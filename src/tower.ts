@@ -11,11 +11,11 @@ const uuid = require("uuid");
 if (process.title != "browser") {
     // Perform special tasks for Node.js to run automated tests.
 
-    // Must put in eval so Typescript doesn't get confused. 
+    // Must put in eval so Typescript doesn't get confused.
     // Note: It must contain vanilla JS, not Typescript!
 
     // Node.js can't include three.js from a CDN, so access it from
-    // local install. For the typical browser use case the file is 
+    // local install. For the typical browser use case the file is
     // likely to have already been cached, so no point hosting locally.
     eval(`var THREE = require("../node_modules/three/build/three.js");`);
 
@@ -137,7 +137,7 @@ namespace GARDEN {
 
 /**
  * tower.js
- * 
+ *
  * A visual scripting system!
  */
 namespace TOWER {
@@ -494,12 +494,30 @@ namespace TOWER {
                 fucus.addEventListener("keydown", function (event) {
                     if (event.key === "Enter") {
                         try {
+                            var screenLoc = model.sceneInteract.lastMousePosition.divide(
+                                new THREE.Vector2(800, 600)
+                            );
+                            screenLoc.x *= 2;
+                            screenLoc.x -= 1;
+                            screenLoc.y *= -2;
+                            screenLoc.y += 1;
+
+                            var raycaster = new THREE.Raycaster();
+                            raycaster.setFromCamera(screenLoc, camera);
+
+                            // Tries to align with the grid lines. May need something else!
+                            var hitResults = raycaster.intersectObject(gridHelper);
+                            var spawnLoc = hitResults[0].point;
+                            spawnLoc.x -= 2;
+                            spawnLoc.y += 1;
+
+
                             var nodeDecl = NodeDecl.parseNode(this.value);
                             var nodeActor = world.deferredSpawnActor<NodeDrawing.NodeActor>(
                                 NodeDrawing.NodeActor,
                                 // Needs to transform screen to world space. Spawn at origin for now.
                                 // new THREE.Vector3(model.sceneInteract.lastMousePosition.x, model.sceneInteract.lastMousePosition.y, 0)
-                                new THREE.Vector3(0, 0, 0)
+                                spawnLoc
                             );
                             nodeActor.nodeDecl = nodeDecl;
                             world.finishDeferredSpawnActor(nodeActor);
@@ -715,7 +733,7 @@ namespace TOWER {
         }
 
         /** Returns whether all tests were passed successfully.
-         * 
+         *
          * Only valid after running tests using `runTests()`.
          */
         function passedAllTests(): boolean {
