@@ -479,6 +479,34 @@ namespace TOWER {
 
     var fucus: HTMLInputElement;
     class RenderManager extends GARDEN.Actor {
+
+        public static mouseToWorld(): THREE.Vector3 {
+            return RenderManager.screenToWorld(model.sceneInteract.lastMousePosition);
+        }
+
+        public static screenToWorld(screenLoc: THREE.Vector2): THREE.Vector3 {
+            // Convert screen pixels into relative coordinates, R[-1, 1]
+            // Assume canvas is 800x600 pixels.
+            screenLoc.divide(new THREE.Vector2(800, 600));
+            screenLoc.x *= 2;
+            screenLoc.x -= 1;
+            screenLoc.y *= -2;
+            screenLoc.y += 1;
+
+            var raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(screenLoc, camera);
+
+            // Tries to align with the grid lines. May need something else!
+            var hitResults = raycaster.intersectObject(gridHelper);
+            var worldLoc = hitResults[0].point;
+
+            // Adjust for the tracing offset to be closer to the target.
+            // (magic numbers)
+            worldLoc.x -= 2;
+            worldLoc.y += 1;
+            return worldLoc;
+        }
+
         public tick(deltaTime: number) {
             if (!model.sceneInteract.bMovedCameraSinceInteract
                 && model.sceneInteract.bJustReleasedPan
@@ -494,30 +522,9 @@ namespace TOWER {
                 fucus.addEventListener("keydown", function (event) {
                     if (event.key === "Enter") {
                         try {
-                            var screenLoc = model.sceneInteract.lastMousePosition.divide(
-                                new THREE.Vector2(800, 600)
-                            );
-                            screenLoc.x *= 2;
-                            screenLoc.x -= 1;
-                            screenLoc.y *= -2;
-                            screenLoc.y += 1;
-
-                            var raycaster = new THREE.Raycaster();
-                            raycaster.setFromCamera(screenLoc, camera);
-
-                            // Tries to align with the grid lines. May need something else!
-                            var hitResults = raycaster.intersectObject(gridHelper);
-                            var spawnLoc = hitResults[0].point;
-                            spawnLoc.x -= 2;
-                            spawnLoc.y += 1;
-
-
                             var nodeDecl = NodeDecl.parseNode(this.value);
                             var nodeActor = world.deferredSpawnActor<NodeDrawing.NodeActor>(
-                                NodeDrawing.NodeActor,
-                                // Needs to transform screen to world space. Spawn at origin for now.
-                                // new THREE.Vector3(model.sceneInteract.lastMousePosition.x, model.sceneInteract.lastMousePosition.y, 0)
-                                spawnLoc
+                                NodeDrawing.NodeActor, RenderManager.mouseToWorld()
                             );
                             nodeActor.nodeDecl = nodeDecl;
                             world.finishDeferredSpawnActor(nodeActor);
