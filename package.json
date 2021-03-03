@@ -16,7 +16,7 @@
   "dependencies": {
     "@types/node": "^13.13.5",
     "browserify": "16.5.1",
-    "pug": "2.0.4",
+    "pug": "3.0.1",
     "pug-cli": "1.0.0-alpha6",
     "sass": "1.26.5",
     "start": "^5.1.0",
